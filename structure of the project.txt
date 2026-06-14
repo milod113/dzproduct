@@ -1,0 +1,623 @@
+Prompt 1 — Analyse du design
+Analyze this homepage design and extract the full UI structure.
+
+The project is a digital product marketplace in Algeria called Boutique Digitale DZ.
+
+I want the same visual identity:
+- white clean background
+- premium green Algerian identity
+- soft shadows
+- rounded cards
+- red accent details
+- large hero section
+- product mockups
+- category cards
+- trust badges
+- testimonials
+- CTA banner
+
+Extract:
+1. all sections in order
+2. layout structure
+3. number of columns
+4. colors
+5. typography style
+6. spacing rules
+7. components needed
+
+Do not write code yet. Give me a precise UI breakdown.
+
+Prompt 2 — Créer la structure Laravel Inertia React
+
+Create the full project structure for a Laravel + Inertia.js + React digital product marketplace.
+
+Project name: Boutique Digitale DZ.
+
+Pages needed:
+- Home
+- Shop
+- Product Details
+- Categories
+- Cart
+- Checkout
+- Login
+- Register
+- User Dashboard
+- My Downloads
+- Blog
+- Blog Details
+- About
+- Contact
+- FAQ
+- Terms
+- Privacy Policy
+- Order Success
+- 404 Page
+
+Create:
+1. Laravel routes
+2. React pages structure
+3. reusable components structure
+4. layouts structure
+5. assets folders
+6. data files for demo products
+
+Use clean architecture and scalable naming.
+
+Prompt 3 — Installer Tailwind et identité visuelle
+
+Configure TailwindCSS for this Laravel Inertia React project.
+
+Use this brand identity:
+
+Primary green: #0B7A35
+Dark green: #064E2B
+Light green: #EAF7EF
+Soft green: #F4FBF6
+Red accent: #EF233C
+Gold accent: #D6A84F
+Text dark: #111827
+Text muted: #6B7280
+Border: #E5E7EB
+Background: #FFFFFF
+
+Add:
+- custom box shadows
+- rounded card style
+- container size
+- hero gradients
+- button styles
+- font family suitable for French and Arabic
+
+Create the Tailwind config and global CSS variables.
+
+Prompt 4 — Créer le layout principal
+
+Create the main frontend layout for Boutique Digitale DZ using React + Inertia.
+
+The layout must include:
+- sticky header
+- logo area
+- navigation menu
+- search icon
+- cart icon with red notification badge
+- login button
+- main content slot
+- footer
+
+Use TailwindCSS.
+Make the design premium, clean, white, green Algerian identity.
+Make it responsive for desktop, tablet, and mobile.
+
+Prompt 5 — Header exactement comme l’image
+
+Build a Header component matching the reference design.
+
+Requirements:
+- left logo with shopping bag icon and Algerian flag symbol
+- text: Boutique Digitale DZ
+- navigation links: Accueil, Boutique, Catégories, À propos, Blog, Contact
+- active link underline in green
+- search icon
+- cart icon with red badge
+- green Connexion button
+- white background
+- subtle bottom border
+- height around 80px
+- desktop horizontal layout
+- mobile responsive menu
+
+Use React and TailwindCSS.
+
+Prompt 6 — Hero section
+
+Create the Home Hero section exactly like the reference design.
+
+Structure:
+- two columns desktop
+- left column:
+  - small pill badge: Produits numériques premium 100% algériens
+  - main title: Créez, apprenez et téléchargez en un clic
+  - make "téléchargez" green
+  - Arabic subtitle: أنشئ، تعلم و حمل في خطوة واحدة
+  - short description
+  - two buttons:
+    1. Découvrir la boutique
+    2. Voir comment ça marche
+  - trust mini badges: Paiement sécurisé, Téléchargement instantané, Accès à vie
+
+- right column:
+  - large soft green circular gradient background
+  - product mockups placeholder cards: ebook, phone, tablet, template
+  - floating premium quality badge
+  - subtle Algerian visual identity
+
+Style:
+- white luxury background
+- green gradients
+- soft shadows
+- rounded elements
+- red small decorative stars
+- responsive layout
+
+
+Prompt 7 — Section statistiques
+
+Create a statistics bar component for the homepage.
+
+It must match the reference style:
+- white rounded rectangle card
+- soft shadow
+- 4 columns on desktop
+- responsive 2 columns on tablet, 1 column on mobile
+- vertical dividers between columns on desktop
+
+Stats:
+1. 25.000+ Clients satisfaits
+2. 120.000+ Téléchargements
+3. 4.9/5 Note moyenne
+4. 100% Sécurisé en Algérie
+
+Use green outline icons and bold green numbers.
+
+
+Prompt 8 — Catégories populaires
+
+
+Create the Popular Categories section.
+
+Design:
+- title: Nos catégories populaires
+- link on the right: Voir toutes les catégories
+- 6 cards in one row on desktop
+- 3 columns on tablet
+- 2 columns on mobile
+- cards with white background, rounded corners, border, soft shadow
+- each card has a top icon badge in green
+- product image placeholder
+- category name
+- short description
+- price in red DZD
+
+Categories:
+1. Ebooks — Guides et livres numériques inspirants — 590 DZD
+2. Packs Éducatifs — Cours, résumés et exercices prêts à l’emploi — 790 DZD
+3. Templates Réseaux Sociaux — Templates Canva pour un feed professionnel — 490 DZD
+4. CV & Lettres de Motivation — Modèles modernes prêts à personnaliser — 390 DZD
+5. Documents Business — Modèles de documents pour votre entreprise — 690 DZD
+6. Mini-Cours — Formations courtes pour passer à l’action — 1.290 DZD
+
+
+Prompt 9 — Avantages / Features
+
+Create a horizontal features section like the reference design.
+
+It should be a white rounded container with 5 columns desktop.
+
+Features:
+1. Qualité Premium — Des contenus soigneusement créés et vérifiés
+2. Prix Accessibles — Des produits de qualité adaptés à tous les budgets
+3. Téléchargement Instantané — Accédez immédiatement à vos fichiers après paiement
+4. Mises à Jour Gratuites — Bénéficiez des mises à jour sans frais supplémentaires
+5. Support Client — Une équipe disponible pour vous accompagner
+
+Use green circular icons, small titles, muted descriptions, soft shadows.
+Make it responsive.
+
+Prompt 10 — Témoignages
+
+Create the Testimonials section.
+
+Design:
+- centered title: Ils nous font confiance
+- red small star decoration under title
+- 3 testimonial cards in one row desktop
+- rounded white cards with shadow
+- avatar image placeholder
+- quote text
+- name
+- city/profession
+- red star rating
+
+Testimonials:
+1. Sarah B. — Étudiante, Oran
+2. Yacine M. — Entrepreneur, Alger
+3. Imane K. — Freelance, Constantine
+
+Use realistic clean UI matching the homepage identity.
+
+Prompt 11 — CTA banner
+
+Create the final CTA banner of the homepage.
+
+Style:
+- large horizontal green gradient banner
+- rounded corners
+- white shopping bag illustration on the left
+- text: Prêt à booster votre potentiel ?
+- description: Rejoignez des milliers de clients et accédez dès maintenant à des ressources digitales qui font la différence.
+- white button: Commencer mes achats
+- small payment secure text
+- Algerian flag visual decoration on the right
+- luxury soft gradient background
+- responsive mobile layout
+
+Prompt 12 — Footer minimal
+
+Create the footer trust bar matching the reference design.
+
+Items:
+- Fait en Algérie
+- Soutenez le digital local
+- 100% Sécurisé
+- Accès à vie
+- Satisfait ou remboursé
+
+Use small icons, centered layout, white background, subtle border top.
+Make it responsive.
+
+Prompt 13 — Page Boutique
+
+Create the Shop page for Boutique Digitale DZ.
+
+Page structure:
+- page hero title: Boutique
+- subtitle: Découvrez nos ressources digitales 100% algériennes
+- search bar
+- category filter tabs
+- price filter
+- product grid
+
+Grid:
+- 4 columns desktop
+- 3 tablet
+- 2 mobile
+- 1 small mobile
+
+Product card:
+- product image
+- category badge
+- title
+- short description
+- rating
+- price in red DZD
+- button: Voir le produit
+- button: Ajouter au panier
+
+Use the same design identity as the homepage.
+
+Prompt 14 — Page détails produit
+
+Create the Product Details page.
+
+Structure:
+- breadcrumb
+- two columns desktop
+- left: product image gallery / mockup preview
+- right:
+  - category badge
+  - product title
+  - rating
+  - price
+  - short description
+  - what is included
+  - file format
+  - instant download badge
+  - CTA buttons: Ajouter au panier, Acheter maintenant
+
+Below:
+- full description
+- benefits
+- reviews
+- related products
+
+Use premium green Algerian identity, white cards, soft shadows.
+
+Prompt 15 — Panier
+
+Create the Cart page.
+
+Structure:
+- title: Mon panier
+- left column: cart items
+- right column: order summary
+
+Cart item:
+- image
+- title
+- category
+- price
+- remove button
+
+Order summary:
+- subtotal
+- discount code input
+- total
+- checkout button
+- secure payment message
+
+Use clean e-commerce UI.
+
+Prompt 16 — Checkout Algérie
+
+Create the Checkout page for Algeria.
+
+Structure:
+- customer information form:
+  - full name
+  - email
+  - phone number
+  - wilaya
+- payment method section:
+  - CIB / Edahabia
+  - BaridiMob
+  - Bank transfer
+- order summary
+- confirm payment button
+
+Important:
+- digital products only
+- no shipping address required
+- show message: Téléchargement instantané après confirmation du paiement
+
+Use secure, trustworthy design.
+
+Prompt 17 — Dashboard utilisateur
+
+Create the User Dashboard page.
+
+Sections:
+- welcome card
+- total orders
+- total downloads
+- recent purchases
+- quick access to downloads
+- account information
+
+Design:
+- clean cards
+- green icons
+- white background
+- same identity as main site
+
+Prompt 18 — Mes téléchargements
+Create the My Downloads page.
+
+Structure:
+- title: Mes téléchargements
+- list of purchased digital products
+- each item:
+  - image
+  - product title
+  - purchase date
+  - file type
+  - download button
+  - invoice button
+
+Add empty state:
+- "Vous n’avez encore aucun téléchargement"
+- CTA: Découvrir la boutique
+
+
+Prompt 19 — Blog
+
+
+Create the Blog page.
+
+Structure:
+- hero title: Blog
+- subtitle about digital business, education, productivity in Algeria
+- featured article
+- blog grid with 3 columns desktop
+- categories sidebar or filter pills
+
+Blog card:
+- image
+- category
+- title
+- excerpt
+- date
+- read more button
+
+Use the same premium design style.
+
+Prompt 20 — Contact
+
+Create the Contact page.
+
+Structure:
+- title: Contactez-nous
+- subtitle
+- two columns:
+  - left: contact form
+  - right: contact information card
+
+Form fields:
+- name
+- email
+- subject
+- message
+- send button
+
+Contact info:
+- email
+- phone
+- location: Algérie
+- social media links
+
+Use friendly professional design.
+
+Prompt 21 — Admin dashboard
+
+
+Create an Admin Dashboard for managing the digital marketplace.
+
+Admin pages:
+- Dashboard
+- Products
+- Categories
+- Orders
+- Customers
+- Reviews
+- Coupons
+- Blog Posts
+- Settings
+
+Dashboard widgets:
+- total sales
+- total orders
+- total customers
+- total downloads
+- recent orders
+- best-selling products
+
+Use Laravel Inertia React.
+Make the admin UI clean and simple.
+
+Prompt 22 — Base de données Laravel
+
+Create Laravel migrations, models, and relationships for this digital product marketplace.
+
+Entities:
+- users
+- categories
+- products
+- product_images
+- orders
+- order_items
+- payments
+- downloads
+- reviews
+- coupons
+- blog_posts
+
+Requirements:
+- products are digital only
+- each product has downloadable file path
+- each order can contain many products
+- after payment confirmation, user gets access to downloads
+- reviews belong to users and products
+- coupons can apply discount
+
+Generate migrations, models, relationships, and seeders.
+
+Prompt 23 — Données demo
+
+Create demo seed data for Boutique Digitale DZ.
+
+Create:
+- 6 categories
+- 24 products
+- 3 testimonials
+- 6 blog posts
+- demo users
+- demo orders
+
+Products should be relevant to Algeria:
+- ebooks
+- educational packs
+- Canva templates
+- CV templates
+- business documents
+- mini-courses
+- social media templates
+- entrepreneur resources
+
+Use prices in DZD.
+
+Prompt 24 — Rendre le design pixel-perfect
+
+Now review all frontend pages and make the UI more pixel-perfect compared to the reference homepage.
+
+Improve:
+- spacing
+- typography
+- card shadows
+- gradients
+- rounded corners
+- green and red accents
+- column structure
+- hero proportions
+- product card consistency
+- responsive behavior
+
+Do not change the project logic.
+Only improve the visual design.
+
+Prompt 25 — Mobile responsive
+
+
+Make the entire Boutique Digitale DZ frontend fully responsive.
+
+Check:
+- header mobile menu
+- hero stacking
+- category cards
+- product grids
+- checkout page
+- cart page
+- dashboard
+- admin pages
+
+Breakpoints:
+- mobile: 1 column
+- small tablet: 2 columns
+- tablet: 3 columns
+- desktop: 4 to 6 columns depending on section
+
+Fix all overflow, spacing, and readability issues.
+
+Prompt 26 — Final prompt pour Cursor
+
+You are a senior Laravel, Inertia.js, React, and TailwindCSS developer.
+
+Build this project step by step:
+Boutique Digitale DZ, a premium Algerian digital product marketplace.
+
+Use:
+- Laravel backend
+- Inertia.js
+- React
+- TailwindCSS
+- MySQL
+- clean reusable components
+
+The design must match the uploaded reference homepage:
+- white premium design
+- Algerian green identity
+- red accents
+- rounded cards
+- soft shadows
+- large hero section
+- 6 category columns on desktop
+- trust badges
+- testimonials
+- CTA banner
+
+Important:
+- implement pages one by one
+- do not refactor unrelated files
+- keep code clean
+- use reusable components
+- make everything responsive
+- use demo data first before backend integration
