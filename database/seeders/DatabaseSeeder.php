@@ -12,6 +12,7 @@ use App\Models\BlogPost;
 use App\Models\Coupon;
 use App\Models\Download;
 use App\Models\Payment;
+use App\Models\SellerMessage;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -31,6 +32,7 @@ class DatabaseSeeder extends Seeder
             'phone'            => '0555 12 34 56',
             'wilaya'           => 'Alger',
             'is_admin'         => true,
+            'role'             => 'admin',
             'email_verified_at'=> now(),
             'password'         => bcrypt('password'),
         ]);
@@ -42,6 +44,7 @@ class DatabaseSeeder extends Seeder
                 'email'                 => 'ahmed@email.dz',
                 'phone'                 => '0555 98 76 54',
                 'wilaya'                => 'Oran',
+                'is_available_for_freelance' => true,
                 'bio'                   => 'Expert freelance et formateur en marketing digital avec 5 ans d\'expérience.',
                 'is_verified_seller'    => true,
                 'is_top_rated_seller'   => true,
@@ -52,6 +55,7 @@ class DatabaseSeeder extends Seeder
                 'email'                 => 'fatima@email.dz',
                 'phone'                 => '0555 45 67 89',
                 'wilaya'                => 'Constantine',
+                'is_available_for_freelance' => true,
                 'bio'                   => 'Designer graphique et créatrice de templates Canva professionnels.',
                 'is_verified_seller'    => true,
                 'seller_since'          => Carbon::now()->subYears(2),
@@ -61,6 +65,7 @@ class DatabaseSeeder extends Seeder
                 'email'                 => 'yacine@email.dz',
                 'phone'                 => '0555 32 10 98',
                 'wilaya'                => 'Alger',
+                'is_available_for_freelance' => true,
                 'bio'                   => 'Développeur web et formateur en programmation et SEO.',
                 'is_verified_seller'    => true,
                 'is_official_partner'   => true,
@@ -99,6 +104,7 @@ class DatabaseSeeder extends Seeder
         $sellerIds = [];
         foreach ($sellers as $s) {
             $user = User::factory()->create(array_merge($s, [
+                'role'              => 'seller',
                 'email_verified_at' => now(),
                 'password'          => bcrypt('password'),
             ]));
@@ -120,6 +126,7 @@ class DatabaseSeeder extends Seeder
         $buyerIds = [];
         foreach ($buyers as $b) {
             $user = User::factory()->create(array_merge($b, [
+                'role'              => 'client',
                 'phone'             => '05' . rand(50, 59) . ' ' . rand(10, 99) . ' ' . rand(10, 99) . ' ' . rand(10, 99),
                 'email_verified_at' => now(),
                 'password'          => bcrypt('password'),
@@ -232,6 +239,7 @@ class DatabaseSeeder extends Seeder
                 'seller_id'    => $sellerIds[array_rand($sellerIds)],
                 'name'         => $p['name'],
                 'slug'         => $p['slug'],
+                'product_type' => 'digital',
                 'description'  => $p['description'],
                 'price'        => $p['price'],
                 'old_price'    => $p['old_price'] ?? null,
@@ -244,6 +252,60 @@ class DatabaseSeeder extends Seeder
                 'created_at'   => Carbon::now()->subDays(rand(10, 365)),
             ]);
             $productIds[] = $product->id;
+        }
+
+        $serviceProducts = [
+            [
+                'seller_email' => 'yacine@email.dz',
+                'category_slug' => 'developpement-web',
+                'name' => 'Revue de code Laravel',
+                'slug' => 'revue-code-laravel-service',
+                'price' => 4500,
+                'description' => 'Audit rapide de votre projet Laravel avec recommandations sur architecture, performance, securite et qualite du code.',
+            ],
+            [
+                'seller_email' => 'ahmed@email.dz',
+                'category_slug' => 'documents-business',
+                'name' => 'Consulting marketing digital 1h',
+                'slug' => 'consulting-marketing-digital-1h',
+                'price' => 6000,
+                'description' => 'Session individuelle pour clarifier votre strategie de contenu, acquisition, tunnel de vente et positionnement.',
+            ],
+            [
+                'seller_email' => 'fatima@email.dz',
+                'category_slug' => 'templates-reseaux-sociaux',
+                'name' => 'Creation de kit visuel sur mesure',
+                'slug' => 'creation-kit-visuel-sur-mesure',
+                'price' => 8500,
+                'description' => 'Conception d un kit branding avec palette, typos, mini charte et templates adaptes a votre marque.',
+            ],
+        ];
+
+        foreach ($serviceProducts as $service) {
+            $seller = User::where('email', $service['seller_email'])->first();
+            $categoryId = $categoryMap[$service['category_slug']] ?? null;
+
+            if (!$seller || !$categoryId) {
+                continue;
+            }
+
+            Product::create([
+                'category_id' => $categoryId,
+                'seller_id' => $seller->id,
+                'name' => $service['name'],
+                'slug' => $service['slug'],
+                'product_type' => 'service',
+                'description' => $service['description'],
+                'price' => $service['price'],
+                'old_price' => null,
+                'file_path' => null,
+                'file_type' => null,
+                'pages' => null,
+                'is_active' => true,
+                'sales_count' => rand(8, 30),
+                'rating_avg' => rand(44, 50) / 10,
+                'created_at' => Carbon::now()->subDays(rand(5, 60)),
+            ]);
         }
 
         // ─────────────────────────────────────────
@@ -471,5 +533,27 @@ class DatabaseSeeder extends Seeder
         foreach ($reviewsData as $r) {
             Review::create(array_merge($r, ['is_approved' => true]));
         }
+
+        SellerMessage::create([
+            'seller_id' => $sellerIds[0],
+            'sender_id' => $buyerIds[0],
+            'product_id' => $productIds[0],
+            'sender_name' => 'Mohamed A.',
+            'sender_email' => 'mohamed@email.dz',
+            'sender_phone' => '0555 34 56 78',
+            'subject' => 'Question avant achat',
+            'message' => 'Bonjour, est-ce que ce produit contient aussi des exemples pratiques adaptes au marche algerien ?',
+        ]);
+
+        SellerMessage::create([
+            'seller_id' => $sellerIds[2],
+            'sender_id' => $buyerIds[3],
+            'product_id' => $productIds[5],
+            'sender_name' => 'Lina M.',
+            'sender_email' => 'lina@email.dz',
+            'sender_phone' => '0555 66 77 88',
+            'subject' => 'Demande d informations',
+            'message' => 'Je souhaite savoir si une mise a jour est incluse apres achat et si le contenu convient aux debutants.',
+        ]);
     }
 }

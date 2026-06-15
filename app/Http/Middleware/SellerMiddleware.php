@@ -12,7 +12,7 @@ class SellerMiddleware
     {
         $user = $request->user();
 
-        if (!$user || (!$user->is_admin && !$user->products()->exists())) {
+        if (!$user || !$user->isSeller()) {
             return redirect()->route('dashboard');
         }
 

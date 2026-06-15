@@ -193,6 +193,17 @@ export default function ProductDetails() {
                                             </div>
                                             <SellerBadges seller={product.seller} />
                                         </div>
+                                        <div className="mt-4">
+                                            <Link
+                                                href={`/vendeurs/${product.seller.id}?product=${product.id}`}
+                                                className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primary-dark"
+                                            >
+                                                Contacter ce vendeur
+                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5l6 6m0 0l-6 6m6-6h-15" />
+                                                </svg>
+                                            </Link>
+                                        </div>
                                     </div>
                                 )}
 

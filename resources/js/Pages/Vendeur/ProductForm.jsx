@@ -10,6 +10,7 @@ export default function SellerProductForm() {
         name: product?.name || '',
         category_id: product?.category_id || '',
         price: product?.price || '',
+        product_type: product?.product_type || 'digital',
         description: product?.description || '',
         file_type: product?.file_type || 'zip',
         file_path: product?.file_path || '',
@@ -86,17 +87,31 @@ export default function SellerProductForm() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-text-dark mb-1.5">Type de fichier</label>
-                                <input type="text" value={form.file_type} onChange={update('file_type')} placeholder="zip, pdf, mp4..." className="w-full px-4 py-3 rounded-lg border border-border text-sm" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-text-dark mb-1.5">Fichier digital</label>
-                                <input type="file" onChange={update('product_file')} className="w-full px-4 py-3 rounded-lg border border-border text-sm bg-white" />
-                                {form.file_path && <p className="mt-2 text-xs text-text-muted">Fichier actuel: {form.file_path}</p>}
-                            </div>
+                        <div>
+                            <label className="block text-sm font-medium text-text-dark mb-1.5">Type de produit</label>
+                            <select value={form.product_type} onChange={update('product_type')} className="w-full px-4 py-3 rounded-lg border border-border text-sm bg-white">
+                                <option value="digital">Produit digital</option>
+                                <option value="service">Consulting / Service</option>
+                            </select>
                         </div>
+
+                        {form.product_type === 'digital' ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-text-dark mb-1.5">Type de fichier</label>
+                                    <input type="text" value={form.file_type} onChange={update('file_type')} placeholder="zip, pdf, mp4..." className="w-full px-4 py-3 rounded-lg border border-border text-sm" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text-dark mb-1.5">Fichier digital</label>
+                                    <input type="file" onChange={update('product_file')} className="w-full px-4 py-3 rounded-lg border border-border text-sm bg-white" />
+                                    {form.file_path && <p className="mt-2 text-xs text-text-muted">Fichier actuel: {form.file_path}</p>}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
+                                Ce produit sera propose comme service ou consulting. Aucun fichier telechargeable n est requis.
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-sm font-medium text-text-dark mb-1.5">Image du produit</label>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import ProductCard from '@/Components/ProductCard'
@@ -13,47 +13,71 @@ function StatCard({ label, value, hint }) {
     )
 }
 
+function FilterLabel({ children }) {
+    return <label className="mb-2 block text-sm font-semibold text-text-dark">{children}</label>
+}
+
 export default function Shop() {
     const { products: allProducts, categories } = usePage().props
     const products = allProducts || []
+
+    const maxCatalogPrice = useMemo(() => {
+        if (!products.length) return 0
+        return Math.max(...products.map((product) => product.price || 0))
+    }, [products])
+
     const [search, setSearch] = useState('')
     const [activeCategory, setActiveCategory] = useState('Tout')
-    const [priceRange, setPriceRange] = useState('all')
+    const [minPrice, setMinPrice] = useState('')
+    const [maxPrice, setMaxPrice] = useState('')
+    const [minRating, setMinRating] = useState('0')
+    const [verifiedOnly, setVerifiedOnly] = useState(false)
     const [sortBy, setSortBy] = useState('featured')
 
-    const filtered = products.filter((product) => {
-        const matchSearch =
-            product.name.toLowerCase().includes(search.toLowerCase()) ||
-            product.description.toLowerCase().includes(search.toLowerCase()) ||
-            product.category.toLowerCase().includes(search.toLowerCase())
-        const matchCategory = activeCategory === 'Tout' || product.category === activeCategory
+    const filteredProducts = useMemo(() => {
+        return products.filter((product) => {
+            const normalizedSearch = search.trim().toLowerCase()
+            const matchesSearch =
+                !normalizedSearch ||
+                product.name.toLowerCase().includes(normalizedSearch) ||
+                product.description.toLowerCase().includes(normalizedSearch) ||
+                product.category.toLowerCase().includes(normalizedSearch) ||
+                product.seller?.name?.toLowerCase().includes(normalizedSearch)
 
-        let matchPrice = true
-        if (priceRange === 'under500') {
-            matchPrice = product.price < 500
-        } else if (priceRange === '500to1000') {
-            matchPrice = product.price >= 500 && product.price <= 1000
-        } else if (priceRange === 'over1000') {
-            matchPrice = product.price > 1000
-        }
+            const matchesCategory = activeCategory === 'Tout' || product.category === activeCategory
 
-        return matchSearch && matchCategory && matchPrice
-    })
+            const numericMinPrice = minPrice === '' ? null : Number(minPrice)
+            const numericMaxPrice = maxPrice === '' ? null : Number(maxPrice)
+            const matchesMinPrice = numericMinPrice === null || product.price >= numericMinPrice
+            const matchesMaxPrice = numericMaxPrice === null || product.price <= numericMaxPrice
 
-    const sortedProducts = [...filtered].sort((a, b) => {
-        switch (sortBy) {
-            case 'price_asc':
-                return a.price - b.price
-            case 'price_desc':
-                return b.price - a.price
-            case 'rating':
-                return (b.rating ?? 0) - (a.rating ?? 0)
-            case 'sales':
-                return (b.sales ?? 0) - (a.sales ?? 0)
-            default:
-                return (b.rating ?? 0) - (a.rating ?? 0) || (b.sales ?? 0) - (a.sales ?? 0)
-        }
-    })
+            const ratingThreshold = Number(minRating || 0)
+            const matchesRating = (product.rating ?? 0) >= ratingThreshold
+
+            const matchesVerified = !verifiedOnly || product.seller?.badges?.includes('verified')
+
+            return matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice && matchesRating && matchesVerified
+        })
+    }, [products, search, activeCategory, minPrice, maxPrice, minRating, verifiedOnly])
+
+    const sortedProducts = useMemo(() => {
+        return [...filteredProducts].sort((a, b) => {
+            switch (sortBy) {
+                case 'newest':
+                    return new Date(b.created_at || 0) - new Date(a.created_at || 0)
+                case 'best_selling':
+                    return (b.sales ?? 0) - (a.sales ?? 0)
+                case 'rating':
+                    return (b.rating ?? 0) - (a.rating ?? 0)
+                case 'price_asc':
+                    return a.price - b.price
+                case 'price_desc':
+                    return b.price - a.price
+                default:
+                    return ((b.rating ?? 0) - (a.rating ?? 0)) || ((b.sales ?? 0) - (a.sales ?? 0))
+            }
+        })
+    }, [filteredProducts, sortBy])
 
     const averagePrice = sortedProducts.length
         ? Math.round(sortedProducts.reduce((sum, product) => sum + product.price, 0) / sortedProducts.length)
@@ -64,7 +88,10 @@ export default function Shop() {
     const resetFilters = () => {
         setSearch('')
         setActiveCategory('Tout')
-        setPriceRange('all')
+        setMinPrice('')
+        setMaxPrice('')
+        setMinRating('0')
+        setVerifiedOnly(false)
         setSortBy('featured')
     }
 
@@ -121,14 +148,14 @@ export default function Shop() {
             <section className="pb-16">
                 <div className="container-max">
                     <div className="rounded-[32px] border border-white/80 bg-white/95 p-5 shadow-[0_22px_60px_rgba(15,23,42,0.1)] backdrop-blur md:p-6">
-                        <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                        <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
                             <div className="relative">
                                 <svg className="absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                                 <input
                                     type="text"
-                                    placeholder="Rechercher un ebook, un pack, un template ou une formation"
+                                    placeholder="Rechercher un ebook, un pack, un template ou un vendeur"
                                     value={search}
                                     onChange={(event) => setSearch(event.target.value)}
                                     className="w-full rounded-2xl border border-border bg-[#f8fbf8] py-4 pl-12 pr-4 text-sm text-text-dark placeholder:text-text-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
@@ -137,54 +164,108 @@ export default function Shop() {
 
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <select
-                                    value={priceRange}
-                                    onChange={(event) => setPriceRange(event.target.value)}
-                                    className="rounded-2xl border border-border bg-[#f8fbf8] px-4 py-4 text-sm text-text-dark transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-                                >
-                                    <option value="all">Tous les prix</option>
-                                    <option value="under500">Moins de 500 DZD</option>
-                                    <option value="500to1000">500 - 1 000 DZD</option>
-                                    <option value="over1000">Plus de 1 000 DZD</option>
-                                </select>
-
-                                <select
                                     value={sortBy}
                                     onChange={(event) => setSortBy(event.target.value)}
                                     className="rounded-2xl border border-border bg-[#f8fbf8] px-4 py-4 text-sm text-text-dark transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
                                 >
                                     <option value="featured">Mieux classes</option>
+                                    <option value="newest">Plus recents</option>
+                                    <option value="best_selling">Plus vendus</option>
                                     <option value="rating">Meilleure note</option>
-                                    <option value="sales">Plus vendus</option>
                                     <option value="price_asc">Prix croissant</option>
                                     <option value="price_desc">Prix decroissant</option>
+                                </select>
+
+                                <select
+                                    value={minRating}
+                                    onChange={(event) => setMinRating(event.target.value)}
+                                    className="rounded-2xl border border-border bg-[#f8fbf8] px-4 py-4 text-sm text-text-dark transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                                >
+                                    <option value="0">Toutes les notes</option>
+                                    <option value="4">4.0 et plus</option>
+                                    <option value="4.5">4.5 et plus</option>
+                                    <option value="4.7">4.7 et plus</option>
                                 </select>
                             </div>
                         </div>
 
-                        <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-5">
-                            <button
-                                onClick={() => setActiveCategory('Tout')}
-                                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                                    activeCategory === 'Tout'
-                                        ? 'bg-primary text-white shadow-[0_12px_30px_rgba(11,122,53,0.2)]'
-                                        : 'bg-[#f3f6f4] text-text-muted hover:bg-primary-light hover:text-primary'
-                                }`}
-                            >
-                                Tout
-                            </button>
-                            {categories.map((category) => (
+                        <div className="mt-5 grid gap-4 border-t border-border pt-5 lg:grid-cols-[1fr_auto]">
+                            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                <div>
+                                    <FilterLabel>Categorie</FilterLabel>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            onClick={() => setActiveCategory('Tout')}
+                                            className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                                                activeCategory === 'Tout'
+                                                    ? 'bg-primary text-white shadow-[0_12px_30px_rgba(11,122,53,0.2)]'
+                                                    : 'bg-[#f3f6f4] text-text-muted hover:bg-primary-light hover:text-primary'
+                                            }`}
+                                        >
+                                            Tout
+                                        </button>
+                                        {categories.map((category) => (
+                                            <button
+                                                key={category.id}
+                                                onClick={() => setActiveCategory(category.name)}
+                                                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                                                    activeCategory === category.name
+                                                        ? 'bg-primary text-white shadow-[0_12px_30px_rgba(11,122,53,0.2)]'
+                                                        : 'bg-[#f3f6f4] text-text-muted hover:bg-primary-light hover:text-primary'
+                                                }`}
+                                            >
+                                                {category.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <FilterLabel>Prix minimum</FilterLabel>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={minPrice}
+                                        onChange={(event) => setMinPrice(event.target.value)}
+                                        placeholder="0"
+                                        className="w-full rounded-2xl border border-border bg-[#f8fbf8] px-4 py-3 text-sm text-text-dark placeholder:text-text-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                                    />
+                                </div>
+
+                                <div>
+                                    <FilterLabel>Prix maximum</FilterLabel>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max={maxCatalogPrice || undefined}
+                                        value={maxPrice}
+                                        onChange={(event) => setMaxPrice(event.target.value)}
+                                        placeholder={maxCatalogPrice ? `${maxCatalogPrice}` : 'Aucune limite'}
+                                        className="w-full rounded-2xl border border-border bg-[#f8fbf8] px-4 py-3 text-sm text-text-dark placeholder:text-text-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+                                    />
+                                </div>
+
+                                <div className="flex items-end">
+                                    <label className="flex w-full items-center gap-3 rounded-2xl border border-border bg-[#f8fbf8] px-4 py-3 text-sm font-medium text-text-dark">
+                                        <input
+                                            type="checkbox"
+                                            checked={verifiedOnly}
+                                            onChange={(event) => setVerifiedOnly(event.target.checked)}
+                                            className="accent-primary"
+                                        />
+                                        Vendeur verifie seulement
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="flex items-end">
                                 <button
-                                    key={category.id}
-                                    onClick={() => setActiveCategory(category.name)}
-                                    className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                                        activeCategory === category.name
-                                            ? 'bg-primary text-white shadow-[0_12px_30px_rgba(11,122,53,0.2)]'
-                                            : 'bg-[#f3f6f4] text-text-muted hover:bg-primary-light hover:text-primary'
-                                    }`}
+                                    onClick={resetFilters}
+                                    className="inline-flex w-full items-center justify-center rounded-2xl border border-border bg-white px-5 py-3 text-sm font-semibold text-text-dark transition-all hover:border-primary/20 hover:text-primary lg:w-auto"
                                 >
-                                    {category.name}
+                                    Reinitialiser
                                 </button>
-                            ))}
+                            </div>
                         </div>
                     </div>
 
@@ -196,12 +277,13 @@ export default function Shop() {
                             </h2>
                             <p className="mt-2 text-sm text-text-muted">
                                 {activeCategory !== 'Tout' ? `Categorie: ${activeCategory}. ` : ''}
-                                {priceRange !== 'all' ? 'Filtre prix actif. ' : ''}
+                                {minPrice || maxPrice ? 'Filtre prix actif. ' : ''}
+                                {verifiedOnly ? 'Vendeurs verifies uniquement. ' : ''}
                                 {search ? `Recherche: "${search}".` : 'Selection premium de la marketplace.'}
                             </p>
                         </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                             <div className="rounded-2xl bg-[#f8fbf8] px-4 py-3">
                                 <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">Top notes</p>
                                 <p className="mt-1 text-sm font-semibold text-text-dark">{topRatedCount} resultats</p>
@@ -209,6 +291,17 @@ export default function Shop() {
                             <div className="rounded-2xl bg-[#f8fbf8] px-4 py-3">
                                 <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">Vendeurs verifies</p>
                                 <p className="mt-1 text-sm font-semibold text-text-dark">{verifiedSellerCount} produits</p>
+                            </div>
+                            <div className="rounded-2xl bg-[#f8fbf8] px-4 py-3">
+                                <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">Tri actif</p>
+                                <p className="mt-1 text-sm font-semibold text-text-dark">
+                                    {sortBy === 'newest' ? 'Plus recents' :
+                                        sortBy === 'best_selling' ? 'Plus vendus' :
+                                        sortBy === 'rating' ? 'Meilleure note' :
+                                        sortBy === 'price_asc' ? 'Prix croissant' :
+                                        sortBy === 'price_desc' ? 'Prix decroissant' :
+                                        'Mieux classes'}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -222,7 +315,7 @@ export default function Shop() {
                             </div>
                             <h3 className="mt-6 text-2xl font-bold text-text-dark">Aucun produit ne correspond a votre recherche</h3>
                             <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-text-muted">
-                                Essayez une autre categorie, retirez un filtre de prix ou revenez a la selection complete pour explorer davantage de produits digitaux premium.
+                                Essayez une autre categorie, ajustez votre plage de prix, retirez le filtre vendeur verifie ou revenez a la selection complete.
                             </p>
                             <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
                                 <button

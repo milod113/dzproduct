@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react'
+import { Link, router, usePage } from '@inertiajs/react'
 import SellerBadges from '@/Components/SellerBadges'
 
 function RatingRow({ rating, sales }) {
@@ -23,8 +23,30 @@ function RatingRow({ rating, sales }) {
 }
 
 export default function ProductCard({ product }) {
+    const { auth } = usePage().props
+
     const addToCart = () => {
         router.post('/panier/ajouter', { product_id: product.id }, {
+            preserveScroll: true,
+            preserveState: true,
+        })
+    }
+
+    const toggleWishlist = () => {
+        if (!auth?.user) {
+            router.visit('/connexion')
+            return
+        }
+
+        if (product.is_favorited) {
+            router.delete(`/favoris/${product.id}`, {
+                preserveScroll: true,
+                preserveState: true,
+            })
+            return
+        }
+
+        router.post('/favoris', { product_id: product.id }, {
             preserveScroll: true,
             preserveState: true,
         })
@@ -54,6 +76,28 @@ export default function ProductCard({ product }) {
                 <div className="absolute left-4 top-4 z-20 inline-flex rounded-full border border-white/70 bg-white/90 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-dark shadow-[0_12px_28px_rgba(15,23,42,0.1)] backdrop-blur">
                     {product.category}
                 </div>
+                <div className={`absolute left-4 top-16 z-20 inline-flex rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] shadow-[0_12px_28px_rgba(15,23,42,0.1)] backdrop-blur ${
+                    product.product_type === 'service'
+                        ? 'border-sky-200 bg-sky-50/95 text-sky-700'
+                        : 'border-emerald-200 bg-emerald-50/95 text-emerald-700'
+                }`}>
+                    {product.product_type === 'service' ? 'Consulting / Service' : 'Telechargement'}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={toggleWishlist}
+                    className={`absolute right-4 top-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-2xl border shadow-[0_12px_28px_rgba(15,23,42,0.12)] backdrop-blur transition-all ${
+                        product.is_favorited
+                            ? 'border-rose-200 bg-rose-50 text-rose-600'
+                            : 'border-white/70 bg-white/90 text-text-muted hover:text-rose-500'
+                    }`}
+                    aria-label={product.is_favorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                >
+                    <svg className="h-5 w-5" fill={product.is_favorited ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                    </svg>
+                </button>
 
                 <div className="absolute bottom-4 left-4 right-4 z-20 flex items-end justify-between gap-3">
                     {product.seller ? (
@@ -101,7 +145,7 @@ export default function ProductCard({ product }) {
                         onClick={addToCart}
                         className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(11,122,53,0.22)] transition-all hover:bg-primary-dark"
                     >
-                        Ajouter
+                        {product.product_type === 'service' ? 'Reserver' : 'Ajouter'}
                     </button>
                 </div>
             </div>

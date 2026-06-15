@@ -14,6 +14,12 @@ class SellerProductController extends Controller
 {
     public function create()
     {
+        $seller = request()->user();
+
+        if ($this->hasReachedPlanLimit($seller)) {
+            return redirect()->route('vendeur.produits')->with('toast', 'Votre plan Starter autorise jusqu a 3 produits. Passez a Pro pour publier davantage.');
+        }
+
         return Inertia::render('Vendeur/ProductForm', [
             'product' => null,
             'categories' => Category::orderBy('name')->get(),
@@ -22,6 +28,10 @@ class SellerProductController extends Controller
 
     public function store(Request $request)
     {
+        if ($this->hasReachedPlanLimit($request->user())) {
+            return redirect()->route('vendeur.produits')->with('toast', 'Limite Starter atteinte. Passez au plan Pro ou Elite pour ajouter plus de produits.');
+        }
+
         $validated = $this->validateProduct($request);
 
         $product = Product::create([
@@ -29,11 +39,12 @@ class SellerProductController extends Controller
             'category_id' => $validated['category_id'],
             'name' => $validated['name'],
             'slug' => $this->uniqueSlug($validated['name']),
+            'product_type' => $validated['product_type'],
             'description' => $validated['description'] ?? null,
             'price' => $validated['price'],
             'is_active' => $validated['is_active'] ?? true,
-            'file_type' => $validated['file_type'] ?? 'zip',
-            'file_path' => $validated['file_path'] ?? null,
+            'file_type' => $validated['product_type'] === 'service' ? null : ($validated['file_type'] ?? 'zip'),
+            'file_path' => $validated['product_type'] === 'service' ? null : ($validated['file_path'] ?? null),
         ]);
 
         $product->update($this->storeAssets($request, $product, $validated));
@@ -51,6 +62,7 @@ class SellerProductController extends Controller
                 'name' => $product->name,
                 'category_id' => $product->category_id,
                 'price' => (int) $product->price,
+                'product_type' => $product->product_type ?? 'digital',
                 'description' => $product->description ?? '',
                 'is_active' => $product->is_active,
                 'file_type' => $product->file_type ?? 'zip',
@@ -69,11 +81,12 @@ class SellerProductController extends Controller
         $product->update([
             'category_id' => $validated['category_id'],
             'name' => $validated['name'],
+            'product_type' => $validated['product_type'],
             'description' => $validated['description'] ?? null,
             'price' => $validated['price'],
             'is_active' => $validated['is_active'] ?? true,
-            'file_type' => $validated['file_type'] ?? 'zip',
-            'file_path' => $validated['file_path'] ?? null,
+            'file_type' => $validated['product_type'] === 'service' ? null : ($validated['file_type'] ?? 'zip'),
+            'file_path' => $validated['product_type'] === 'service' ? null : ($validated['file_path'] ?? null),
         ]);
 
         $product->update($this->storeAssets($request, $product, $validated));
@@ -109,6 +122,7 @@ class SellerProductController extends Controller
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'price' => 'required|numeric|min:0',
+            'product_type' => 'required|in:digital,service',
             'description' => 'nullable|string',
             'is_active' => 'boolean',
             'file_type' => 'nullable|string|max:50',
@@ -120,6 +134,17 @@ class SellerProductController extends Controller
 
     private function storeAssets(Request $request, Product $product, array $validated): array
     {
+        if (($validated['product_type'] ?? 'digital') === 'service') {
+            if ($request->hasFile('product_file') && $product->file_path) {
+                Storage::disk('local')->delete($product->file_path);
+            }
+
+            return [
+                'file_type' => null,
+                'file_path' => null,
+            ];
+        }
+
         $attributes = [
             'file_type' => $validated['file_type'] ?? 'zip',
             'file_path' => $validated['file_path'] ?? $product->file_path,
@@ -175,5 +200,16 @@ class SellerProductController extends Controller
         }
 
         return $slug;
+    }
+
+    private function hasReachedPlanLimit($seller): bool
+    {
+        $limit = $seller->sellerProductLimit();
+
+        if ($limit === null) {
+            return false;
+        }
+
+        return Product::where('seller_id', $seller->id)->count() >= $limit;
     }
 }

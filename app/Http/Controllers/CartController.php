@@ -28,6 +28,7 @@ class CartController extends Controller
                 'price' => (int) $p->price,
                 'image' => '/images/products/' . $shortSlug . '.' . $ext,
                 'description' => $p->description ?? '',
+                'product_type' => $p->product_type ?? 'digital',
                 'cartId' => $item['cart_id'],
             ];
         })->filter()->values();

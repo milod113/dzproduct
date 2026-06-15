@@ -11,6 +11,7 @@ class Product extends Model
         'seller_id',
         'name',
         'slug',
+        'product_type',
         'description',
         'price',
         'old_price',
@@ -59,5 +60,20 @@ class Product extends Model
     public function reviews()
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function wishlistItems()
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    public function isService(): bool
+    {
+        return $this->product_type === 'service';
+    }
+
+    public function serviceMissions()
+    {
+        return $this->hasMany(ServiceMission::class);
     }
 }

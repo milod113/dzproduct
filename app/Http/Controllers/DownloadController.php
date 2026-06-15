@@ -17,6 +17,10 @@ class DownloadController extends Controller
 
         $product = Product::findOrFail($productId);
 
+        if (($product->product_type ?? 'digital') !== 'digital') {
+            return back()->with('toast', 'Ce produit correspond a un service. Aucun fichier telechargeable n est associe.');
+        }
+
         $download->increment('download_count');
         $download->update(['downloaded_at' => now()]);
 

@@ -102,6 +102,10 @@ export default function AppLayout({ children }) {
                                     <Link href="/faq" className="text-sm text-emerald-50/78 transition-colors hover:text-white">FAQ</Link>
                                     <Link href="/conditions" className="text-sm text-emerald-50/78 transition-colors hover:text-white">Conditions generales</Link>
                                     <Link href="/confidentialite" className="text-sm text-emerald-50/78 transition-colors hover:text-white">Politique de confidentialite</Link>
+                                    <Link href="/remboursement" className="text-sm text-emerald-50/78 transition-colors hover:text-white">Politique de remboursement</Link>
+                                    <Link href="/protection-acheteur" className="text-sm text-emerald-50/78 transition-colors hover:text-white">Protection acheteur</Link>
+                                    <Link href="/conditions-vendeur" className="text-sm text-emerald-50/78 transition-colors hover:text-white">Conditions vendeur</Link>
+                                    <Link href="/copyright" className="text-sm text-emerald-50/78 transition-colors hover:text-white">Copyright & propriete intellectuelle</Link>
                                     <Link href="/tableau-de-bord" className="text-sm text-emerald-50/78 transition-colors hover:text-white">Mon compte</Link>
                                 </div>
                             </div>

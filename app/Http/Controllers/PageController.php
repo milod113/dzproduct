@@ -9,6 +9,8 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Download;
 use App\Models\ProductImage;
+use App\Models\SellerMessage;
+use App\Models\ServiceMission;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -16,6 +18,8 @@ use Inertia\Inertia;
 
 class PageController extends Controller
 {
+    private ?Collection $wishlistIds = null;
+
     public function home()
     {
         $products = Product::with(['category', 'seller', 'images'])->get()->map(fn ($p) => $this->formatProduct($p));
@@ -35,7 +39,7 @@ class PageController extends Controller
         $categories = Category::orderBy('sort_order')->get()->map(fn ($c) => $this->formatCategory($c));
 
         return Inertia::render('Shop', [
-            'products' => $products,
+            'products' => $products->sortByDesc(fn ($product) => $this->sellerPlanWeightFromFormatted($product))->values(),
             'categories' => $categories,
         ]);
     }
@@ -61,7 +65,7 @@ class PageController extends Controller
 
     public function sellerProfile($id)
     {
-        $seller = User::where('is_admin', false)
+        $seller = User::where('role', 'seller')
             ->with(['products.category', 'products.images', 'products.seller'])
             ->findOrFail($id);
 
@@ -102,7 +106,9 @@ class PageController extends Controller
             ->where('category_id', $category->id)
             ->where('is_active', true)
             ->get()
-            ->map(fn ($p) => $this->formatProduct($p));
+            ->map(fn ($p) => $this->formatProduct($p))
+            ->sortByDesc(fn ($product) => $this->sellerPlanWeightFromFormatted($product))
+            ->values();
         $categories = Category::orderBy('sort_order')->get()->map(fn ($c) => $this->formatCategory($c));
 
         return Inertia::render('Categories', [
@@ -127,18 +133,47 @@ class PageController extends Controller
     public function dashboard()
     {
         $user = auth()->user();
+
+        if ($user?->role === 'seller') {
+            return redirect()->route('vendeur.dashboard');
+        }
+
+        if ($user?->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
         $orders = Order::where('user_id', $user->id)->with('items.product')->orderBy('created_at', 'desc')->get();
         $downloads = Download::where('user_id', $user->id)->with('product')->orderBy('downloaded_at', 'desc')->get();
-
+        $serviceMissions = ServiceMission::with('product')
+            ->where('client_id', $user->id)
+            ->latest()
+            ->get()
+            ->map(fn ($mission) => [
+                'id' => $mission->id,
+                'mission_number' => $mission->mission_number,
+                'status' => $mission->status,
+                'product_name' => $mission->product?->name,
+            ])
+            ->values();
         return Inertia::render('UserDashboard', [
             'orders' => $orders,
             'downloads' => $downloads,
+            'serviceMissions' => $serviceMissions,
         ]);
     }
 
     public function myDownloads()
     {
         $user = auth()->user();
+
+        if ($user?->role === 'seller') {
+            return redirect()->route('vendeur.dashboard');
+        }
+
+        if ($user?->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
         $downloads = Download::where('user_id', $user->id)
             ->with('product.category')
             ->orderBy('downloaded_at', 'desc')
@@ -161,10 +196,42 @@ class PageController extends Controller
             ->get()
             ->map(fn ($p) => $this->formatProduct($p));
         $orderItems = $this->sellerOrderItems($sellerId);
+        $unreadMessages = SellerMessage::where('seller_id', $sellerId)->whereNull('read_at')->count();
+        $recentMessages = SellerMessage::where('seller_id', $sellerId)
+            ->latest()
+            ->limit(4)
+            ->get()
+            ->map(fn ($message) => [
+                'id' => $message->id,
+                'sender_name' => $message->sender_name,
+                'subject' => $message->subject,
+                'created_at' => $message->created_at?->diffForHumans(),
+            ]);
+        $serviceMissions = ServiceMission::with('client', 'product')
+            ->where('seller_id', $sellerId)
+            ->latest()
+            ->limit(4)
+            ->get()
+            ->map(fn ($mission) => [
+                'id' => $mission->id,
+                'mission_number' => $mission->mission_number,
+                'status' => $mission->status,
+                'client_name' => $mission->client?->name,
+                'product_name' => $mission->product?->name,
+            ])
+            ->values();
 
         return Inertia::render('Vendeur/Dashboard', [
             'products' => $products,
             'sellerStats' => $this->buildSellerStats($products, $orderItems),
+            'messageSummary' => [
+                'unread' => $unreadMessages,
+                'recent' => $recentMessages,
+            ],
+            'serviceMissionSummary' => [
+                'total' => ServiceMission::where('seller_id', $sellerId)->count(),
+                'recent' => $serviceMissions,
+            ],
         ]);
     }
 
@@ -219,6 +286,11 @@ class PageController extends Controller
 
     private function formatProduct($p)
     {
+        return $this->formatProductForWishlist($p);
+    }
+
+    public function formatProductForWishlist($p)
+    {
         $slugMap = [
             'guide-freelance-algerie' => 'guide-freelance',
             'pack-reussite-bac' => 'pack-bac',
@@ -251,6 +323,8 @@ class PageController extends Controller
         $primaryImage = $p->images?->firstWhere('is_primary', true) ?? $p->images?->first();
         $image = $primaryImage ? '/storage/' . ltrim($primaryImage->image_path, '/') : '/images/products/' . $shortSlug . '.' . $ext;
 
+        $wishlistIds = $this->currentWishlistIds();
+
         return [
             'id' => $p->id,
             'name' => $p->name,
@@ -260,10 +334,29 @@ class PageController extends Controller
             'price' => (int) $p->price,
             'rating' => (float) $p->rating_avg,
             'sales' => $p->sales_count,
+            'created_at' => $p->created_at?->toISOString(),
             'image' => $image,
             'description' => $p->description ?? '',
+            'product_type' => $p->product_type ?? 'digital',
             'seller' => $this->formatSeller($p->seller),
+            'is_favorited' => $wishlistIds->contains($p->id),
         ];
+    }
+
+    private function currentWishlistIds(): Collection
+    {
+        if ($this->wishlistIds !== null) {
+            return $this->wishlistIds;
+        }
+
+        if (!auth()->check()) {
+            $this->wishlistIds = collect();
+            return $this->wishlistIds;
+        }
+
+        $this->wishlistIds = auth()->user()->wishlistItems()->pluck('product_id');
+
+        return $this->wishlistIds;
     }
 
     private function formatSeller(?User $seller, array $options = []): ?array
@@ -289,7 +382,12 @@ class PageController extends Controller
         $formattedSeller = [
             'id' => $seller->id,
             'name' => $seller->name,
+            'phone' => $seller->phone,
             'wilaya' => $seller->wilaya,
+            'seller_plan' => $seller->seller_plan,
+            'seller_plan_label' => $seller->sellerPlanLabel(),
+            'whatsapp_cta_text' => $seller->canUseCustomWhatsappCta() ? ($seller->whatsapp_cta_text ?: 'Achat Instantane') : null,
+            'is_available_for_freelance' => (bool) $seller->is_available_for_freelance,
             'badges' => $badges,
         ];
 
@@ -307,6 +405,15 @@ class PageController extends Controller
         }
 
         return $formattedSeller;
+    }
+
+    private function sellerPlanWeightFromFormatted(array $product): int
+    {
+        return match ($product['seller']['seller_plan'] ?? 'starter') {
+            User::SELLER_PLAN_ELITE => 3,
+            User::SELLER_PLAN_PRO => 2,
+            default => 1,
+        };
     }
 
     private function formatCategory($c)

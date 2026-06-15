@@ -8,6 +8,9 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\ServiceMission;
+use App\Models\ServiceMissionMessage;
+use App\Notifications\ServiceMissionNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -81,11 +84,50 @@ class CheckoutController extends Controller
 
             $product->increment('sales_count');
 
-            Download::create([
-                'user_id' => $user->id,
-                'product_id' => $product->id,
-                'order_id' => $order->id,
-            ]);
+            if (($product->product_type ?? 'digital') === 'digital') {
+                Download::create([
+                    'user_id' => $user->id,
+                    'product_id' => $product->id,
+                    'order_id' => $order->id,
+                ]);
+            } else {
+                $mission = ServiceMission::create([
+                    'order_id' => $order->id,
+                    'product_id' => $product->id,
+                    'client_id' => $user->id,
+                    'seller_id' => $product->seller_id,
+                    'mission_number' => 'MIS-' . strtoupper(Str::random(8)),
+                    'status' => ServiceMission::STATUS_RESERVED,
+                ]);
+
+                ServiceMissionMessage::create([
+                    'service_mission_id' => $mission->id,
+                    'sender_id' => null,
+                    'message_type' => 'system',
+                    'message' => 'Mission reservee apres achat du service. Le client doit maintenant soumettre son brief.',
+                ]);
+
+                ServiceMissionMessage::create([
+                    'service_mission_id' => $mission->id,
+                    'sender_id' => null,
+                    'message_type' => 'system',
+                    'message' => 'Le vendeur a ete notifie et pourra prendre en charge la mission apres reception du brief.',
+                ]);
+
+                $user->notify(new ServiceMissionNotification(
+                    $mission,
+                    'Service reserve avec succes',
+                    "Votre mission {$mission->mission_number} est creee. Completez maintenant le brief pour demarrer.",
+                    route('client.services.show', $mission->id)
+                ));
+
+                $product->seller?->notify(new ServiceMissionNotification(
+                    $mission,
+                    'Nouveau service reserve',
+                    "Une nouvelle mission {$mission->mission_number} a ete reservee pour {$product->name}.",
+                    route('vendeur.services.show', $mission->id)
+                ));
+            }
         }
 
         Payment::create([
@@ -153,6 +195,7 @@ class CheckoutController extends Controller
                 'price' => (int) $product->price,
                 'image' => $this->productImage($product),
                 'description' => $product->description ?? '',
+                'product_type' => $product->product_type ?? 'digital',
             ];
         })->filter()->values();
 

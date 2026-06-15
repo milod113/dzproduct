@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\SellerPlanRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -11,6 +12,121 @@ use Inertia\Inertia;
 
 class AdminController extends Controller
 {
+    public function sellers()
+    {
+        $sellers = User::where('role', 'seller')
+            ->withCount('products')
+            ->with(['products' => fn ($query) => $query->select('id', 'seller_id', 'sales_count', 'rating_avg', 'price')])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($seller) {
+                $products = $seller->products;
+                $pendingPlanRequest = SellerPlanRequest::where('seller_id', $seller->id)
+                    ->where('status', SellerPlanRequest::STATUS_PENDING)
+                    ->latest()
+                    ->first();
+                $totalSales = (int) $products->sum('sales_count');
+                $averageRating = $products->count() > 0 ? round($products->avg('rating_avg') ?? 0, 1) : 0;
+                $averagePrice = $products->count() > 0 ? (int) round($products->avg('price') ?? 0) : 0;
+                $estimatedRevenue = (int) $products->sum(fn ($product) => ((int) $product->sales_count) * ((int) $product->price));
+                $isExpired = $seller->seller_plan !== User::SELLER_PLAN_STARTER
+                    && $seller->seller_plan_expires_at
+                    && $seller->seller_plan_expires_at->isPast();
+                $performanceScore = $totalSales + ($averageRating * 25) + min($estimatedRevenue / 250, 500);
+
+                return [
+                    'id' => $seller->id,
+                    'name' => $seller->name,
+                    'email' => $seller->email,
+                    'phone' => $seller->phone,
+                    'wilaya' => $seller->wilaya,
+                    'bio' => $seller->bio,
+                    'seller_plan' => $seller->seller_plan,
+                    'seller_plan_label' => $seller->sellerPlanLabel(),
+                    'seller_plan_started_at' => $seller->seller_plan_started_at?->format('Y-m-d'),
+                    'seller_plan_expires_at' => $seller->seller_plan_expires_at?->format('Y-m-d'),
+                    'whatsapp_cta_text' => $seller->whatsapp_cta_text,
+                    'seller_since' => $seller->seller_since?->format('Y-m-d'),
+                    'seller_since_label' => $seller->seller_since?->translatedFormat('F Y'),
+                    'products_count' => $seller->products_count,
+                    'total_sales' => $totalSales,
+                    'average_rating' => $averageRating,
+                    'average_price' => $averagePrice,
+                    'estimated_revenue' => $estimatedRevenue,
+                    'performance_score' => round($performanceScore, 1),
+                    'is_plan_expired' => $isExpired,
+                    'has_pending_validation' => (bool) $pendingPlanRequest,
+                    'pending_validation_label' => $pendingPlanRequest?->payment_status === SellerPlanRequest::PAYMENT_PAID
+                        ? 'Paiement recu, validation admin requise'
+                        : ($pendingPlanRequest ? 'Demande en attente de paiement' : null),
+                    'pending_plan_request' => $pendingPlanRequest ? [
+                        'requested_plan' => $pendingPlanRequest->requested_plan,
+                        'requested_plan_label' => match ($pendingPlanRequest->requested_plan) {
+                            User::SELLER_PLAN_PRO => 'Pro',
+                            User::SELLER_PLAN_ELITE => 'Elite',
+                            default => 'Starter',
+                        },
+                        'payment_status' => $pendingPlanRequest->payment_status,
+                    ] : null,
+                    'badges' => [
+                        'is_verified_seller' => (bool) $seller->is_verified_seller,
+                        'is_top_rated_seller' => (bool) $seller->is_top_rated_seller,
+                        'is_official_partner' => (bool) $seller->is_official_partner,
+                    ],
+                ];
+            })
+            ->values();
+
+        return Inertia::render('Admin/Sellers', [
+            'sellers' => $sellers,
+            'sellerStats' => [
+                'total' => $sellers->count(),
+                'verified' => $sellers->where('badges.is_verified_seller', true)->count(),
+                'topRated' => $sellers->where('badges.is_top_rated_seller', true)->count(),
+                'official' => $sellers->where('badges.is_official_partner', true)->count(),
+                'expired' => $sellers->where('is_plan_expired', true)->count(),
+                'pendingValidation' => $sellers->where('has_pending_validation', true)->count(),
+                'starter' => $sellers->where('seller_plan', User::SELLER_PLAN_STARTER)->count(),
+                'pro' => $sellers->where('seller_plan', User::SELLER_PLAN_PRO)->count(),
+                'elite' => $sellers->where('seller_plan', User::SELLER_PLAN_ELITE)->count(),
+            ],
+            'topPerformers' => $sellers->sortByDesc('performance_score')->take(5)->values(),
+        ]);
+    }
+
+    public function sellerUpdate(Request $request, $id)
+    {
+        $seller = User::where('role', 'seller')->findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $seller->id,
+            'phone' => 'nullable|string|max:20',
+            'wilaya' => 'nullable|string|max:255',
+            'bio' => 'nullable|string|max:1200',
+            'seller_plan' => 'required|in:starter,pro,elite',
+            'whatsapp_cta_text' => 'nullable|string|max:100',
+            'is_verified_seller' => 'boolean',
+            'is_top_rated_seller' => 'boolean',
+            'is_official_partner' => 'boolean',
+        ]);
+
+        $seller->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'wilaya' => $validated['wilaya'] ?? null,
+            'bio' => $validated['bio'] ?? null,
+            'seller_plan' => $validated['seller_plan'],
+            'whatsapp_cta_text' => $validated['seller_plan'] === 'elite' ? ($validated['whatsapp_cta_text'] ?? null) : null,
+            'is_verified_seller' => ($validated['is_verified_seller'] ?? false) || in_array($validated['seller_plan'], ['pro', 'elite'], true),
+            'is_top_rated_seller' => $validated['is_top_rated_seller'] ?? false,
+            'is_official_partner' => $validated['is_official_partner'] ?? false,
+        ]);
+
+        return redirect()->route('admin.sellers')->with('toast', 'Vendeur mis a jour avec succes');
+    }
+
     public function products()
     {
         $products = Product::with(['category', 'seller'])->orderBy('created_at', 'desc')->get()->map(fn ($p) => [
