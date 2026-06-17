@@ -138,6 +138,7 @@ class AdminController extends Controller
             'seller_id' => $p->seller_id,
             'seller_name' => $p->seller?->name ?? 'Aucun vendeur',
             'price' => (int) $p->price,
+            'is_free' => (bool) $p->is_free,
             'sales' => $p->sales_count,
             'rating' => (float) $p->rating_avg,
             'is_active' => $p->is_active,
@@ -171,6 +172,7 @@ class AdminController extends Controller
             'category_id' => 'required|exists:categories,id',
             'seller_id' => 'nullable|exists:users,id',
             'price' => 'required|numeric|min:0',
+            'is_free' => 'boolean',
             'description' => 'nullable|string',
             'is_active' => 'boolean',
             'is_verified_seller' => 'boolean',
@@ -186,7 +188,8 @@ class AdminController extends Controller
             'name' => $validated['name'],
             'slug' => $slug,
             'description' => $validated['description'] ?? null,
-            'price' => $validated['price'],
+            'price' => ($validated['is_free'] ?? false) ? 0 : $validated['price'],
+            'is_free' => $validated['is_free'] ?? false,
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
@@ -208,6 +211,7 @@ class AdminController extends Controller
                 'category_id' => $product->category_id,
                 'seller_id' => $product->seller_id,
                 'price' => (int) $product->price,
+                'is_free' => (bool) $product->is_free,
                 'description' => $product->description ?? '',
                 'is_active' => $product->is_active,
                 'file_path' => $product->file_path,
@@ -230,6 +234,7 @@ class AdminController extends Controller
             'category_id' => 'required|exists:categories,id',
             'seller_id' => 'nullable|exists:users,id',
             'price' => 'required|numeric|min:0',
+            'is_free' => 'boolean',
             'description' => 'nullable|string',
             'is_active' => 'boolean',
             'is_verified_seller' => 'boolean',
@@ -242,7 +247,8 @@ class AdminController extends Controller
             'seller_id' => $validated['seller_id'] ?? null,
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'price' => $validated['price'],
+            'price' => ($validated['is_free'] ?? false) ? 0 : $validated['price'],
+            'is_free' => $validated['is_free'] ?? false,
             'is_active' => $validated['is_active'] ?? true,
         ]);
 

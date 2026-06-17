@@ -6,14 +6,16 @@ import CategoriesSection from '@/Components/CategoriesSection'
 import FeaturesSection from '@/Components/FeaturesSection'
 import TestimonialsSection from '@/Components/TestimonialsSection'
 import CTABanner from '@/Components/CTABanner'
+import StudentSpaceSection from '@/Components/StudentSpaceSection'
 
 export default function Home() {
-    const { categories } = usePage().props
+    const { categories, studentSpace } = usePage().props
 
     return (
         <AppLayout>
             <HeroSection />
             <StatsSection />
+            <StudentSpaceSection studentSpace={studentSpace} />
             <CategoriesSection categories={categories} />
             <FeaturesSection />
             <TestimonialsSection />

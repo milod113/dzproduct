@@ -13,6 +13,8 @@ use App\Models\Coupon;
 use App\Models\Download;
 use App\Models\Payment;
 use App\Models\SellerMessage;
+use App\Models\ServiceMission;
+use App\Models\ServiceMissionMessage;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -240,12 +242,90 @@ class DatabaseSeeder extends Seeder
                 'name'         => $p['name'],
                 'slug'         => $p['slug'],
                 'product_type' => 'digital',
+                'is_free' => in_array($p['slug'], [
+                    'ebook-productivite-gestion-temps',
+                    'templates-stories-instagram',
+                    'guide-epargne-budget-familial',
+                ], true),
                 'description'  => $p['description'],
-                'price'        => $p['price'],
+                'price'        => in_array($p['slug'], [
+                    'ebook-productivite-gestion-temps',
+                    'templates-stories-instagram',
+                    'guide-epargne-budget-familial',
+                ], true) ? 0 : $p['price'],
                 'old_price'    => $p['old_price'] ?? null,
                 'file_path'    => 'products/' . $p['slug'] . '.' . $p['file_type'],
                 'file_type'    => $p['file_type'],
                 'pages'        => $p['pages'] ?? null,
+                'file_size_label' => match ($p['file_type']) {
+                    'pdf' => rand(8, 35) . ' MB',
+                    'xlsx' => rand(2, 8) . ' MB',
+                    default => rand(25, 180) . ' MB',
+                },
+                'item_count' => match ($p['cat']) {
+                    'templates-reseaux-sociaux' => rand(12, 60),
+                    'packs-educatifs' => rand(8, 30),
+                    'photographie-design' => rand(20, 120),
+                    'developpement-web' => rand(5, 18),
+                    default => rand(1, 12),
+                },
+                'skill_level' => match ($p['cat']) {
+                    'developpement-web', 'finance-investissement' => 'intermediaire',
+                    'mini-cours' => 'debutant',
+                    default => 'debutant',
+                },
+                'usage_license' => in_array($p['cat'], ['templates-reseaux-sociaux', 'photographie-design', 'developpement-web'], true)
+                    ? 'Usage personnel et commercial limite'
+                    : 'Usage personnel',
+                'version' => '1.' . rand(0, 4),
+                'last_updated_at' => Carbon::now()->subDays(rand(2, 45)),
+                'included_items' => match ($p['cat']) {
+                    'templates-reseaux-sociaux' => ['Templates modifiables', 'Guide de personnalisation', 'Fichiers bonus'],
+                    'developpement-web' => ['Code source complet', 'Documentation d installation', 'Fichiers assets'],
+                    'packs-educatifs' => ['Cours resumes', 'Exercices corriges', 'Fichiers bonus'],
+                    default => ['Fichier principal', 'Guide de prise en main', 'Acces immediate apres achat'],
+                },
+                'compatible_with' => match ($p['file_type']) {
+                    'pdf' => ['Mobile', 'Ordinateur', 'Adobe Reader'],
+                    'xlsx' => ['Microsoft Excel', 'Google Sheets', 'Ordinateur'],
+                    default => match ($p['cat']) {
+                        'templates-reseaux-sociaux' => ['Canva Free', 'Canva Pro', 'Mobile et ordinateur'],
+                        'developpement-web' => ['VS Code', 'ZIP extracteur', 'Ordinateur'],
+                        default => ['Ordinateur', 'Mobile'],
+                    },
+                },
+                'benefits' => match ($p['cat']) {
+                    'packs-educatifs' => ['Gain de temps dans les revisions', 'Structure claire et prete a etudier', 'Contenu adapte au contexte algerien'],
+                    'templates-reseaux-sociaux' => ['Publication plus rapide', 'Image de marque plus professionnelle', 'Templates faciles a modifier'],
+                    'developpement-web' => ['Demarrage plus rapide', 'Base technique reutilisable', 'Moins de temps de production'],
+                    default => ['Livraison instantanee', 'Utilisation simple', 'Valeur pratique immediate'],
+                },
+                'preview_points' => match ($p['cat']) {
+                    'templates-reseaux-sociaux' => ['Templates organises par usage', 'Edition simple sur Canva', 'Rendu adapte aux marques locales'],
+                    'developpement-web' => ['Architecture facile a relire', 'Fichiers prets a deployer', 'Base claire pour gagner du temps'],
+                    'packs-educatifs' => ['Cours resumes et structures', 'Progression simple a suivre', 'Documents faciles a imprimer ou consulter'],
+                    default => ['Presentation claire du contenu', 'Usage immediat apres achat', 'Structure premium et professionnelle'],
+                },
+                'faq_items' => match ($p['cat']) {
+                    'templates-reseaux-sociaux' => [
+                        ['question' => 'Canva Pro est il obligatoire ?', 'answer' => 'Non, la plupart des elements restent utilisables sur Canva Free sauf mention contraire.'],
+                        ['question' => 'Puis je modifier les couleurs et textes ?', 'answer' => 'Oui, tous les templates sont concus pour etre personnalises rapidement.'],
+                    ],
+                    'developpement-web' => [
+                        ['question' => 'Le code est il modifiable ?', 'answer' => 'Oui, le livrable est fourni pour etre adapte selon votre projet.'],
+                        ['question' => 'Y a t il une documentation ?', 'answer' => 'Oui, une documentation de base est incluse pour faciliter l installation.'],
+                    ],
+                    default => [
+                        ['question' => 'Le fichier est il livre instantanement ?', 'answer' => 'Oui, le telechargement devient disponible juste apres la validation du paiement.'],
+                        ['question' => 'Le produit convient il a un debutant ?', 'answer' => 'Oui, la structure reste simple a prendre en main et adaptee a une utilisation rapide.'],
+                    ],
+                },
+                'usage_instructions' => match ($p['cat']) {
+                    'templates-reseaux-sociaux' => ['Telechargez le fichier ZIP apres achat.', 'Ouvrez le lien ou les fichiers Canva fournis.', 'Dupliquez les designs puis remplacez textes, couleurs et images.', 'Exportez vos visuels pour publication.'],
+                    'developpement-web' => ['Telechargez et decompressez l archive.', 'Ouvrez le projet dans votre editeur de code.', 'Suivez la documentation d installation incluse.', 'Personnalisez la base selon votre besoin puis deployez.'],
+                    'packs-educatifs' => ['Telechargez le pack complet.', 'Commencez par le dossier de synthese ou le sommaire.', 'Suivez les exercices corriges par ordre de difficulte.', 'Consultez les bonus pour aller plus loin.'],
+                    default => ['Telechargez le fichier apres confirmation du paiement.', 'Ouvrez le document ou le pack principal.', 'Utilisez les fichiers annexes pour personnaliser ou approfondir le contenu.'],
+                },
                 'is_active'    => true,
                 'sales_count'  => $p['sales'],
                 'rating_avg'   => $p['rating'],
@@ -511,6 +591,134 @@ class DatabaseSeeder extends Seeder
         // ─────────────────────────────────────────
         //  REVIEWS
         // ─────────────────────────────────────────
+
+        $designSeller = User::where('email', 'fatima@email.dz')->first();
+        $designBuyer = User::where('email', 'yasmine@email.dz')->first();
+        $designService = Product::where('slug', 'creation-kit-visuel-sur-mesure')->first();
+
+        if ($designSeller && $designBuyer && $designService) {
+            $serviceCreatedAt = Carbon::now()->subDays(4);
+
+            $serviceOrder = Order::create([
+                'user_id' => $designBuyer->id,
+                'order_number' => 'CMD-SRV-001',
+                'status' => 'completed',
+                'subtotal' => $designService->price,
+                'discount' => 0,
+                'total' => $designService->price,
+                'coupon_code' => null,
+                'created_at' => $serviceCreatedAt,
+                'updated_at' => $serviceCreatedAt,
+            ]);
+
+            OrderItem::create([
+                'order_id' => $serviceOrder->id,
+                'product_id' => $designService->id,
+                'price' => $designService->price,
+                'created_at' => $serviceCreatedAt,
+                'updated_at' => $serviceCreatedAt,
+            ]);
+
+            Payment::create([
+                'order_id' => $serviceOrder->id,
+                'user_id' => $designBuyer->id,
+                'payment_method' => 'BaridiMob',
+                'status' => 'completed',
+                'amount' => $designService->price,
+                'transaction_id' => 'TXN-SRV-' . strtoupper(Str::random(8)),
+                'created_at' => $serviceCreatedAt,
+                'updated_at' => $serviceCreatedAt,
+            ]);
+
+            $mission = ServiceMission::create([
+                'order_id' => $serviceOrder->id,
+                'product_id' => $designService->id,
+                'client_id' => $designBuyer->id,
+                'seller_id' => $designSeller->id,
+                'mission_number' => 'MIS-DESIGN-001',
+                'status' => ServiceMission::STATUS_REVISION_REQUESTED,
+                'brief_title' => 'Identite visuelle premium pour une marque de bijoux handmade',
+                'brief_objective' => 'Creer une identite visuelle elegante et feminine pour une nouvelle marque de bijoux artisanaux destinee a Instagram et aux marketplaces locales.',
+                'brief_requirements' => 'Logo principal et secondaire, palette creme-or-noir, 6 templates Instagram, 3 stories de lancement, style minimal luxe, livraison modifiable sur Canva.',
+                'brief_deadline' => 'Premiere proposition sous 5 jours',
+                'brief_reference_link' => 'https://www.behance.net/gallery/188000001/Luxury-Jewelry-Brand-Inspiration',
+                'brief_notes' => 'La marque cible les femmes de 22 a 38 ans. Il faut un rendu moderne, raffine et facile a reutiliser pendant les promotions Aid et Ramadan.',
+                'seller_delivery_message' => 'Je vous ai prepare une premiere direction artistique avec deux variantes de logo et un set initial de templates. Dites-moi si vous souhaitez plus de contraste sur la palette.',
+                'brief_submitted_at' => $serviceCreatedAt->copy()->addHours(2),
+                'started_at' => $serviceCreatedAt->copy()->addHours(8),
+                'delivered_at' => $serviceCreatedAt->copy()->addDays(3),
+                'created_at' => $serviceCreatedAt,
+                'updated_at' => $serviceCreatedAt->copy()->addDays(3)->addHours(2),
+            ]);
+
+            $serviceMessages = [
+                [
+                    'sender_id' => null,
+                    'message_type' => 'system',
+                    'message' => 'Mission reservee apres paiement confirme. Le client doit maintenant soumettre un brief detaille.',
+                    'created_at' => $serviceCreatedAt,
+                ],
+                [
+                    'sender_id' => $designBuyer->id,
+                    'message_type' => 'user',
+                    'message' => 'Bonjour Fatima, je viens de reserver le service. Je veux une image de marque haut de gamme pour ma nouvelle boutique de bijoux.',
+                    'created_at' => $serviceCreatedAt->copy()->addHour(),
+                ],
+                [
+                    'sender_id' => null,
+                    'message_type' => 'system',
+                    'message' => 'Le client a soumis le brief de mission. Vous pouvez maintenant analyser la demande et demarrer le travail.',
+                    'created_at' => $serviceCreatedAt->copy()->addHours(2),
+                ],
+                [
+                    'sender_id' => $designSeller->id,
+                    'message_type' => 'user',
+                    'message' => 'Merci pour le brief, il est tres clair. Je vais commencer par une direction artistique avec palette, typographies et logo principal.',
+                    'created_at' => $serviceCreatedAt->copy()->addHours(9),
+                ],
+                [
+                    'sender_id' => null,
+                    'message_type' => 'system',
+                    'message' => 'Le vendeur a demarre la production de la mission.',
+                    'created_at' => $serviceCreatedAt->copy()->addHours(10),
+                ],
+                [
+                    'sender_id' => $designSeller->id,
+                    'message_type' => 'user',
+                    'message' => 'Petit point d avancement: la piste creme et or fonctionne tres bien. Je finalise maintenant les templates Instagram et les stories de lancement.',
+                    'created_at' => $serviceCreatedAt->copy()->addDays(2),
+                ],
+                [
+                    'sender_id' => null,
+                    'message_type' => 'system',
+                    'message' => 'Livraison effectuee: Je vous ai prepare une premiere direction artistique avec deux variantes de logo et un set initial de templates. Dites-moi si vous souhaitez plus de contraste sur la palette.',
+                    'created_at' => $serviceCreatedAt->copy()->addDays(3),
+                ],
+                [
+                    'sender_id' => $designBuyer->id,
+                    'message_type' => 'user',
+                    'message' => 'Le travail est tres propre. J aime beaucoup la direction generale, mais je veux une version un peu plus lumineuse pour les stories et un logo secondaire plus lisible en petit format.',
+                    'created_at' => $serviceCreatedAt->copy()->addDays(3)->addHour(),
+                ],
+                [
+                    'sender_id' => null,
+                    'message_type' => 'system',
+                    'message' => 'Le client a demande une revision supplementaire.',
+                    'created_at' => $serviceCreatedAt->copy()->addDays(3)->addHours(2),
+                ],
+            ];
+
+            foreach ($serviceMessages as $message) {
+                ServiceMissionMessage::create([
+                    'service_mission_id' => $mission->id,
+                    'sender_id' => $message['sender_id'],
+                    'message_type' => $message['message_type'],
+                    'message' => $message['message'],
+                    'created_at' => $message['created_at'],
+                    'updated_at' => $message['created_at'],
+                ]);
+            }
+        }
 
         $reviewsData = [
             ['user_id' => $buyerIds[0], 'product_id' => $productIds[0],  'rating' => 5, 'comment' => 'Excellent guide, très complet et bien structuré. J\'ai lancé mon activité en moins d\'un mois !'],

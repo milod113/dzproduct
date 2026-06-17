@@ -11,6 +11,7 @@ export default function ProductForm() {
         category_id: product?.category_id || '',
         seller_id: product?.seller_id || '',
         price: product?.price || '',
+        is_free: product?.is_free ?? false,
         description: product?.description || '',
         is_active: product?.is_active ?? true,
         is_verified_seller: product?.is_verified_seller ?? false,
@@ -99,13 +100,24 @@ export default function ProductForm() {
                                 <input
                                     type="number"
                                     min="0"
-                                    value={form.price}
+                                    value={form.is_free ? 0 : form.price}
                                     onChange={update('price')}
                                     required
-                                    className="w-full px-4 py-3 rounded-lg border border-border text-sm text-text-dark placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                                    disabled={form.is_free}
+                                    className="w-full px-4 py-3 rounded-lg border border-border text-sm text-text-dark placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors disabled:bg-gray-100 disabled:text-text-muted"
                                 />
                             </div>
                         </div>
+
+                        <label className="flex items-center gap-3 cursor-pointer rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                            <input
+                                type="checkbox"
+                                checked={form.is_free}
+                                onChange={update('is_free')}
+                                className="w-4 h-4 accent-primary rounded"
+                            />
+                            <span className="text-sm text-text-dark font-medium">Produit gratuit telechargeable sans paiement</span>
+                        </label>
 
                         <div>
                             <label className="block text-sm font-medium text-text-dark mb-1.5">Description</label>

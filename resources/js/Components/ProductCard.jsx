@@ -22,14 +22,40 @@ function RatingRow({ rating, sales }) {
     )
 }
 
+function StudentBadge({ badge }) {
+    const toneClass = {
+        green: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        amber: 'border-amber-200 bg-amber-50 text-amber-700',
+        sky: 'border-sky-200 bg-sky-50 text-sky-700',
+        violet: 'border-violet-200 bg-violet-50 text-violet-700',
+        rose: 'border-rose-200 bg-rose-50 text-rose-700',
+    }[badge?.tone] || 'border-slate-200 bg-slate-50 text-slate-700'
+
+    return (
+        <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${toneClass}`}>
+            {badge?.label}
+        </span>
+    )
+}
+
 export default function ProductCard({ product }) {
     const { auth } = usePage().props
+    const studentBadges = product.student_badges || []
 
     const addToCart = () => {
         router.post('/panier/ajouter', { product_id: product.id }, {
             preserveScroll: true,
             preserveState: true,
         })
+    }
+
+    const claimFree = () => {
+        if (!auth?.user) {
+            router.visit('/connexion')
+            return
+        }
+
+        router.post(`/gratuits/${product.id}/telecharger`)
     }
 
     const toggleWishlist = () => {
@@ -77,11 +103,13 @@ export default function ProductCard({ product }) {
                     {product.category}
                 </div>
                 <div className={`absolute left-4 top-16 z-20 inline-flex rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] shadow-[0_12px_28px_rgba(15,23,42,0.1)] backdrop-blur ${
-                    product.product_type === 'service'
+                    product.is_free
+                        ? 'border-emerald-200 bg-emerald-50/95 text-emerald-700'
+                        : product.product_type === 'service'
                         ? 'border-sky-200 bg-sky-50/95 text-sky-700'
                         : 'border-emerald-200 bg-emerald-50/95 text-emerald-700'
                 }`}>
-                    {product.product_type === 'service' ? 'Consulting / Service' : 'Telechargement'}
+                    {product.is_free ? 'Gratuit' : product.product_type === 'service' ? 'Consulting / Service' : 'Telechargement'}
                 </div>
 
                 <button
@@ -113,7 +141,7 @@ export default function ProductCard({ product }) {
 
                     <div className="rounded-2xl bg-[#112b21] px-4 py-3 text-right text-white shadow-[0_16px_35px_rgba(17,43,33,0.28)]">
                         <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-100/70">Prix</p>
-                        <p className="mt-1 text-lg font-bold">{product.price.toLocaleString('fr-DZ')} DZD</p>
+                        <p className="mt-1 text-lg font-bold">{product.is_free ? 'Gratuit' : `${product.price.toLocaleString('fr-DZ')} DZD`}</p>
                     </div>
                 </div>
             </div>
@@ -130,6 +158,14 @@ export default function ProductCard({ product }) {
                     <SellerBadges seller={product.seller} className="mt-4" compact />
                 )}
 
+                {studentBadges.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {studentBadges.map((badge) => (
+                            <StudentBadge key={`${product.id}-${badge.label}`} badge={badge} />
+                        ))}
+                    </div>
+                )}
+
                 <div className="mt-5 rounded-2xl bg-[#f8fbf8] p-4">
                     <RatingRow rating={product.rating ?? 0} sales={product.sales ?? 0} />
                 </div>
@@ -141,12 +177,21 @@ export default function ProductCard({ product }) {
                     >
                         Voir le produit
                     </Link>
-                    <button
-                        onClick={addToCart}
-                        className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(11,122,53,0.22)] transition-all hover:bg-primary-dark"
-                    >
-                        {product.product_type === 'service' ? 'Reserver' : 'Ajouter'}
-                    </button>
+                    {product.is_free ? (
+                        <button
+                            onClick={claimFree}
+                            className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(11,122,53,0.22)] transition-all hover:bg-primary-dark"
+                        >
+                            Telecharger
+                        </button>
+                    ) : (
+                        <button
+                            onClick={addToCart}
+                            className="inline-flex items-center justify-center rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(11,122,53,0.22)] transition-all hover:bg-primary-dark"
+                        >
+                            {product.product_type === 'service' ? 'Reserver' : 'Ajouter'}
+                        </button>
+                    )}
                 </div>
             </div>
         </article>

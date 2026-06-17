@@ -30,6 +30,7 @@ class PageController extends Controller
             'products' => $products,
             'categories' => $categories,
             'blogPosts' => $posts,
+            'studentSpace' => $this->buildStudentSpaceData($products),
         ]);
     }
 
@@ -40,6 +41,26 @@ class PageController extends Controller
 
         return Inertia::render('Shop', [
             'products' => $products->sortByDesc(fn ($product) => $this->sellerPlanWeightFromFormatted($product))->values(),
+            'categories' => $categories,
+            'studentSpace' => $this->buildStudentSpaceData($products),
+        ]);
+    }
+
+    public function freeProducts()
+    {
+        $products = Product::with(['category', 'seller', 'images'])
+            ->where('is_active', true)
+            ->where('is_free', true)
+            ->where('product_type', 'digital')
+            ->get()
+            ->map(fn ($p) => $this->formatProduct($p))
+            ->sortByDesc('created_at')
+            ->values();
+
+        $categories = Category::orderBy('sort_order')->get()->map(fn ($c) => $this->formatCategory($c));
+
+        return Inertia::render('FreeProducts', [
+            'products' => $products,
             'categories' => $categories,
         ]);
     }
@@ -224,6 +245,7 @@ class PageController extends Controller
         return Inertia::render('Vendeur/Dashboard', [
             'products' => $products,
             'sellerStats' => $this->buildSellerStats($products, $orderItems),
+            'analytics' => $this->buildSellerAnalytics($products, $orderItems),
             'messageSummary' => [
                 'unread' => $unreadMessages,
                 'recent' => $recentMessages,
@@ -237,12 +259,24 @@ class PageController extends Controller
 
     public function vendeurProduits()
     {
+        $seller = auth()->user();
         $products = Product::with(['category', 'seller', 'images'])
-            ->where('seller_id', auth()->id())
+            ->where('seller_id', $seller->id)
             ->get()
             ->map(fn ($p) => $this->formatProduct($p));
         $categories = Category::orderBy('sort_order')->get()->map(fn ($c) => $this->formatCategory($c));
-        return Inertia::render('Vendeur/Produits', ['products' => $products, 'categories' => $categories]);
+        $productLimit = $seller->sellerProductLimit();
+
+        return Inertia::render('Vendeur/Produits', [
+            'products' => $products,
+            'categories' => $categories,
+            'productAccess' => [
+                'count' => $products->count(),
+                'limit' => $productLimit,
+                'canCreate' => $productLimit === null || $products->count() < $productLimit,
+                'planLabel' => $seller->sellerPlanLabel(),
+            ],
+        ]);
     }
 
     public function vendeurRevenus()
@@ -338,7 +372,38 @@ class PageController extends Controller
             'image' => $image,
             'description' => $p->description ?? '',
             'product_type' => $p->product_type ?? 'digital',
+            'is_free' => (bool) $p->is_free,
+            'old_price' => $p->old_price ? (int) $p->old_price : null,
+            'file_type' => $p->file_type,
+            'pages' => $p->pages,
+            'file_size_label' => $p->file_size_label,
+            'item_count' => $p->item_count,
+            'skill_level' => $p->skill_level,
+            'usage_license' => $p->usage_license,
+            'version' => $p->version,
+            'last_updated_at' => $p->last_updated_at?->format('d/m/Y'),
+            'included_items' => $p->included_items ?? [],
+            'compatible_with' => $p->compatible_with ?? [],
+            'benefits' => $p->benefits ?? [],
+            'preview_points' => $p->preview_points ?? [],
+            'faq_items' => $p->faq_items ?? [],
+            'usage_instructions' => $p->usage_instructions ?? [],
+            'gallery' => $p->images
+                ? $p->images->sortBy('sort_order')->values()->map(fn ($imageItem) => [
+                    'id' => $imageItem->id,
+                    'url' => '/storage/' . ltrim($imageItem->image_path, '/'),
+                    'is_primary' => (bool) $imageItem->is_primary,
+                ])->all()
+                : [],
             'seller' => $this->formatSeller($p->seller),
+            'student_badges' => $this->buildStudentBadges([
+                'category' => $p->category?->name ?? '',
+                'is_free' => (bool) $p->is_free,
+                'price' => (int) $p->price,
+                'skill_level' => $p->skill_level,
+                'sales' => (int) $p->sales_count,
+                'rating' => (float) $p->rating_avg,
+            ]),
             'is_favorited' => $wishlistIds->contains($p->id),
         ];
     }
@@ -519,6 +584,174 @@ class PageController extends Controller
             'averageMonthlyRevenue' => $monthly->count() > 0 ? (int) round($monthly->avg('revenue')) : 0,
             'monthly' => $monthly,
         ];
+    }
+
+    private function buildSellerAnalytics(Collection $products, Collection $orderItems): array
+    {
+        $revenueSummary = $this->buildRevenueSummary($orderItems);
+        $monthly = collect($revenueSummary['monthly'] ?? []);
+        $totalRevenue = (int) $orderItems->sum('price');
+        $thisMonthRevenue = (int) ($revenueSummary['thisMonthRevenue'] ?? 0);
+
+        $lastMonthKey = now()->subMonth()->format('Y-m');
+        $lastMonthRevenue = (int) $orderItems
+            ->filter(fn ($item) => optional($item->order?->created_at)->format('Y-m') === $lastMonthKey)
+            ->sum('price');
+
+        $revenueChangePercent = $lastMonthRevenue > 0
+            ? round((($thisMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100, 1)
+            : ($thisMonthRevenue > 0 ? 100.0 : 0.0);
+
+        $productsByCategory = $products
+            ->groupBy('category')
+            ->map(function ($categoryProducts, $categoryName) use ($orderItems) {
+                $productIds = $categoryProducts->pluck('id');
+                $categoryOrderItems = $orderItems->whereIn('product_id', $productIds);
+
+                return [
+                    'category' => $categoryName ?: 'Autres',
+                    'products' => $categoryProducts->count(),
+                    'sales' => $categoryOrderItems->count(),
+                    'revenue' => (int) $categoryOrderItems->sum('price'),
+                ];
+            })
+            ->sortByDesc('revenue')
+            ->values();
+
+        $freeProducts = $products->where('is_free', true)->count();
+        $paidProducts = $products->where('is_free', false)->count();
+        $serviceProducts = $products->where('product_type', 'service')->count();
+        $digitalProducts = $products->where('product_type', 'digital')->count();
+
+        $bestCategory = $productsByCategory->first();
+
+        return [
+            'headline' => [
+                'totalRevenue' => $totalRevenue,
+                'thisMonthRevenue' => $thisMonthRevenue,
+                'lastMonthRevenue' => $lastMonthRevenue,
+                'revenueChangePercent' => $revenueChangePercent,
+                'averageMonthlyRevenue' => (int) ($revenueSummary['averageMonthlyRevenue'] ?? 0),
+            ],
+            'monthlyTrend' => $monthly->map(fn ($item) => [
+                'month' => $item['month'],
+                'sales' => $item['sales'],
+                'revenue' => $item['revenue'],
+            ])->values(),
+            'categoryRevenue' => $productsByCategory,
+            'catalogMix' => [
+                'freeProducts' => $freeProducts,
+                'paidProducts' => $paidProducts,
+                'serviceProducts' => $serviceProducts,
+                'digitalProducts' => $digitalProducts,
+            ],
+            'insights' => [
+                'bestCategory' => $bestCategory['category'] ?? 'Aucune',
+                'bestCategoryRevenue' => $bestCategory['revenue'] ?? 0,
+                'bestCategorySales' => $bestCategory['sales'] ?? 0,
+                'topFreeProductsShare' => $products->count() > 0 ? round(($freeProducts / $products->count()) * 100, 1) : 0,
+                'topPaidProductsShare' => $products->count() > 0 ? round(($paidProducts / $products->count()) * 100, 1) : 0,
+            ],
+        ];
+    }
+
+    private function buildStudentSpaceData(Collection $products): array
+    {
+        $studentProducts = $products
+            ->filter(fn ($product) => $this->isStudentFriendlyProduct($product))
+            ->values();
+
+        $studentBundles = $studentProducts
+            ->filter(fn ($product) => str_contains(mb_strtolower($product['name'] ?? ''), 'pack'))
+            ->sortByDesc(function ($product) {
+                return (($product['rating'] ?? 0) * 1000) + ($product['sales'] ?? 0);
+            })
+            ->take(3)
+            ->values();
+
+        $underBudgetCount = $studentProducts->filter(fn ($product) => ($product['price'] ?? 0) > 0 && ($product['price'] ?? 0) <= 500)->count();
+        $freeCount = $studentProducts->where('is_free', true)->count();
+
+        return [
+            'headline' => [
+                'title' => 'Espace Etudiant',
+                'description' => 'Des ressources utiles pour reviser, apprendre, preparer un CV et progresser avec un budget adapte aux etudiants algeriens.',
+                'freeCount' => $freeCount,
+                'underBudgetCount' => $underBudgetCount,
+                'beginnerCount' => $studentProducts->where('skill_level', 'debutant')->count(),
+            ],
+            'bundles' => $studentBundles->all(),
+            'featured' => $studentProducts
+                ->sortByDesc(function ($product) {
+                    $score = ($product['rating'] ?? 0) * 100;
+                    $score += $product['sales'] ?? 0;
+                    $score += ($product['is_free'] ?? false) ? 35 : 0;
+                    $score += (($product['price'] ?? 0) > 0 && ($product['price'] ?? 0) <= 500) ? 20 : 0;
+
+                    return $score;
+                })
+                ->take(8)
+                ->values()
+                ->all(),
+        ];
+    }
+
+    private function isStudentFriendlyProduct(array $product): bool
+    {
+        $category = mb_strtolower($product['category'] ?? '');
+        $name = mb_strtolower($product['name'] ?? '');
+
+        $studentCategories = [
+            'packs éducatifs',
+            'packs educatifs',
+            'mini-cours',
+            'cv & lettres de motivation',
+            'ebooks',
+            'développement web',
+            'developpement web',
+        ];
+
+        return in_array($category, $studentCategories, true)
+            || str_contains($name, 'bac')
+            || str_contains($name, 'bem')
+            || str_contains($name, 'cv')
+            || str_contains($name, 'concours')
+            || str_contains($name, 'programmation');
+    }
+
+    private function buildStudentBadges(array $product): array
+    {
+        $badges = [];
+        $category = mb_strtolower($product['category'] ?? '');
+        $name = mb_strtolower($product['name'] ?? '');
+        $price = (int) ($product['price'] ?? 0);
+        $rating = (float) ($product['rating'] ?? 0);
+        $sales = (int) ($product['sales'] ?? 0);
+
+        if (!empty($product['is_free'])) {
+            $badges[] = ['label' => 'Gratuit', 'tone' => 'green'];
+        }
+
+        if ($price > 0 && $price <= 500) {
+            $badges[] = ['label' => 'Petit budget', 'tone' => 'amber'];
+        }
+
+        if (($product['skill_level'] ?? null) === 'debutant') {
+            $badges[] = ['label' => 'Debutant', 'tone' => 'sky'];
+        }
+
+        if (in_array($category, ['packs éducatifs', 'packs educatifs', 'mini-cours'], true)
+            || str_contains($name, 'bac')
+            || str_contains($name, 'bem')
+        ) {
+            $badges[] = ['label' => 'Etudiant', 'tone' => 'violet'];
+        }
+
+        if ($rating >= 4.8 || $sales >= 2000) {
+            $badges[] = ['label' => 'Tres demande', 'tone' => 'rose'];
+        }
+
+        return array_slice($badges, 0, 3);
     }
 
     private function formatOrderStatus(?string $status): string

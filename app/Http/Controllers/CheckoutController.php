@@ -196,6 +196,7 @@ class CheckoutController extends Controller
                 'image' => $this->productImage($product),
                 'description' => $product->description ?? '',
                 'product_type' => $product->product_type ?? 'digital',
+                'is_free' => (bool) $product->is_free,
             ];
         })->filter()->values();
 

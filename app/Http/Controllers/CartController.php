@@ -29,6 +29,7 @@ class CartController extends Controller
                 'image' => '/images/products/' . $shortSlug . '.' . $ext,
                 'description' => $p->description ?? '',
                 'product_type' => $p->product_type ?? 'digital',
+                'is_free' => (bool) $p->is_free,
                 'cartId' => $item['cart_id'],
             ];
         })->filter()->values();
@@ -44,6 +45,12 @@ class CartController extends Controller
     public function add(Request $request)
     {
         $request->validate(['product_id' => 'required|exists:products,id']);
+        $product = Product::findOrFail($request->product_id);
+
+        if ($product->is_free) {
+            return back()->with('toast', 'Ce produit est gratuit. Utilisez le bouton de telechargement gratuit.');
+        }
+
         $cart = session()->get('cart', []);
 
         $exists = collect($cart)->firstWhere('product_id', $request->product_id);

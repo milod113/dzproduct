@@ -3,6 +3,7 @@ import ScrollNavigator from '@/Components/ScrollNavigator'
 
 const clientLinks = [
     { href: '/tableau-de-bord', label: 'Tableau de bord' },
+    { href: '/mes-services', label: 'Mes services' },
     { href: '/mes-telechargements', label: 'Mes telechargements' },
     { href: '/favoris', label: 'Mes favoris' },
     { href: '/boutique', label: 'Boutique' },

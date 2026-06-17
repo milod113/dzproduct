@@ -5,6 +5,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DownloadController;
+use App\Http\Controllers\FreeProductController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SellerMessageController;
@@ -19,6 +20,7 @@ use Inertia\Inertia;
 Route::get('/', [PageController::class, 'home'])->name('home');
 
 Route::get('/boutique', [PageController::class, 'shop'])->name('shop');
+Route::get('/gratuits', [PageController::class, 'freeProducts'])->name('free.products');
 Route::get('/boutique/{slug}', [PageController::class, 'productDetails'])->name('product.details');
 Route::get('/vendeurs/{id}', [PageController::class, 'sellerProfile'])->name('seller.profile');
 Route::get('/categories', [PageController::class, 'categories'])->name('categories');
@@ -60,6 +62,7 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/mes-services/{id}/action', [ServiceMissionController::class, 'clientAction'])->name('client.services.action');
 
     Route::get('/telechargement/{productId}', [DownloadController::class, 'download'])->name('download.file');
+    Route::post('/gratuits/{productId}/telecharger', [FreeProductController::class, 'claim'])->name('free.products.claim');
 });
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {

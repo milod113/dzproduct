@@ -1,26 +1,8 @@
 import { Link, router, usePage } from '@inertiajs/react'
+import { useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import ProductCard from '@/Components/ProductCard'
 import SellerBadges from '@/Components/SellerBadges'
-
-const fileFormats = ['PDF', 'DOCX', 'PPTX', 'ZIP', 'MP4', 'CANVA']
-
-const includedItems = [
-    { label: 'Guide complet et structure professionnelle', included: true },
-    { label: 'Modeles prets a personnaliser', included: true },
-    { label: 'Acces aux mises a jour futures', included: true },
-    { label: 'Support prioritaire apres achat', included: true },
-    { label: 'Certification premium incluse', included: false },
-]
-
-const benefitItems = [
-    'Contenu adapte au marche algerien',
-    'Telechargement instantane 24/7',
-    'Compatible mobile et ordinateur',
-    'Utilisation simple et rapide',
-    'Qualite validee par la marketplace',
-    'Gain de temps immediat pour l acheteur',
-]
 
 const mockReviews = [
     {
@@ -68,14 +50,57 @@ function InfoCard({ title, children }) {
 }
 
 export default function ProductDetails() {
-    const { product, related: relatedProducts } = usePage().props
+    const { product, related: relatedProducts, auth } = usePage().props
     const related = relatedProducts || []
+    const gallery = product?.gallery?.length ? product.gallery : [{ id: 'fallback-main', url: product.image, is_primary: true }]
+    const fileFormats = product?.file_type ? [String(product.file_type).toUpperCase()] : []
+    const includedItems = (product?.included_items?.length ? product.included_items : [
+        'Fichier principal pret a utiliser',
+        'Structure professionnelle facile a exploiter',
+        'Acces immediat apres paiement',
+    ]).map((item) => ({ label: item, included: true }))
+    const benefitItems = product?.benefits?.length ? product.benefits : [
+        'Telechargement instantane 24/7',
+        'Utilisation simple et rapide',
+        'Qualite verifiee par la marketplace',
+    ]
+    const compatibilityItems = product?.compatible_with?.length ? product.compatible_with : ['Ordinateur', 'Mobile']
+    const previewPoints = product?.preview_points?.length ? product.preview_points : [
+        'Structure claire et professionnelle',
+        'Fichiers simples a utiliser',
+        'Presentation adaptee a un usage immediat',
+    ]
+    const faqItems = product?.faq_items?.length ? product.faq_items : [
+        {
+            question: 'Le fichier est-il livre instantanement ?',
+            answer: 'Oui, le telechargement devient disponible juste apres la confirmation du paiement.',
+        },
+        {
+            question: 'Puis-je l utiliser facilement ?',
+            answer: 'Oui, le produit est pense pour rester simple a prendre en main et rapide a exploiter.',
+        },
+    ]
+    const usageInstructions = product?.usage_instructions?.length ? product.usage_instructions : [
+        'Telechargez le produit apres confirmation du paiement.',
+        'Ouvrez le fichier principal ou decompressez l archive ZIP.',
+        'Suivez les fichiers fournis pour personnaliser rapidement le contenu.',
+    ]
+    const [activeImage, setActiveImage] = useState(gallery.find((item) => item.is_primary)?.url || gallery[0]?.url || product.image)
 
     const addToCart = () => {
         router.post('/panier/ajouter', { product_id: product.id }, {
             preserveScroll: true,
             preserveState: true,
         })
+    }
+
+    const claimFree = () => {
+        if (!auth?.user) {
+            router.visit('/connexion')
+            return
+        }
+
+        router.post(`/gratuits/${product.id}/telecharger`)
     }
 
     if (!product) {
@@ -121,7 +146,7 @@ export default function ProductDetails() {
                                 <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,#edf7ef_0%,#ffffff_48%,#e6f3e9_100%)]">
                                     <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent" />
                                     <img
-                                        src={product.image}
+                                        src={activeImage}
                                         alt={product.name}
                                         className="h-full w-full object-cover"
                                         onError={(e) => {
@@ -146,18 +171,23 @@ export default function ProductDetails() {
 
                                     <div className="absolute bottom-5 right-5 rounded-2xl bg-[#112b21] px-4 py-3 text-white shadow-[0_18px_40px_rgba(17,43,33,0.28)]">
                                         <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-100/70">Prix</p>
-                                        <p className="mt-1 text-2xl font-bold">{product.price.toLocaleString('fr-DZ')} DZD</p>
+                                        <p className="mt-1 text-2xl font-bold">{product.is_free ? 'Gratuit' : `${product.price.toLocaleString('fr-DZ')} DZD`}</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div key={i} className="overflow-hidden rounded-2xl border border-border/80 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+                                {gallery.map((item, index) => (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => setActiveImage(item.url)}
+                                        className={`overflow-hidden rounded-2xl border bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition-all ${activeImage === item.url ? 'border-primary ring-2 ring-primary/20' : 'border-border/80 hover:border-primary/30'}`}
+                                    >
                                         <div className="aspect-[4/3] overflow-hidden bg-gray-100">
-                                            <img src={product.image} alt={`${product.name} ${i}`} className="h-full w-full object-cover" />
+                                            <img src={item.url} alt={`${product.name} ${index + 1}`} className="h-full w-full object-cover" />
                                         </div>
-                                    </div>
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -165,7 +195,7 @@ export default function ProductDetails() {
                         <div className="lg:sticky lg:top-24">
                             <div className="rounded-[34px] border border-white/70 bg-white/90 p-6 shadow-[0_26px_70px_rgba(15,23,42,0.12)] backdrop-blur md:p-8">
                                 <div className="inline-flex rounded-full bg-primary-light px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                                    Produit premium
+                                    {product.is_free ? 'Produit gratuit' : 'Produit premium'}
                                 </div>
 
                                 <h1 className="mt-5 text-3xl font-bold leading-tight text-text-dark md:text-4xl">
@@ -178,7 +208,7 @@ export default function ProductDetails() {
                                         <span className="text-sm font-semibold text-text-dark">{product.rating}/5</span>
                                     </div>
                                     <span className="text-sm text-text-muted">{product.sales} ventes</span>
-                                    <span className="text-sm text-primary">Telechargement instantane</span>
+                                    <span className="text-sm text-primary">{product.is_free ? 'Telechargement gratuit' : 'Telechargement instantane'}</span>
                                 </div>
 
                                 {product.seller && (
@@ -218,23 +248,34 @@ export default function ProductDetails() {
                                     </div>
                                     <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
                                         <p className="text-xs uppercase tracking-[0.18em] text-slate-600">Formats</p>
-                                        <p className="mt-2 text-sm font-semibold text-text-dark">{fileFormats.slice(0, 3).join(', ')} +3</p>
+                                        <p className="mt-2 text-sm font-semibold text-text-dark">{fileFormats.length ? fileFormats.join(', ') : 'Produit digital'}</p>
                                     </div>
                                 </div>
 
                                 <div className="mt-7 grid gap-3">
-                                    <button onClick={addToCart} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 text-base font-semibold text-white shadow-[0_18px_40px_rgba(11,122,53,0.24)] transition-all hover:bg-primary-dark">
-                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-                                        </svg>
-                                        Ajouter au panier
-                                    </button>
-                                    <Link href="/checkout" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-white px-5 py-4 text-base font-semibold text-text-dark transition-all hover:border-primary/25 hover:text-primary">
-                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v9.575c0 .621-.504 1.125-1.125 1.125h-.75M3.75 4.5h-.75" />
-                                        </svg>
-                                        Acheter maintenant
-                                    </Link>
+                                    {product.is_free ? (
+                                        <button onClick={claimFree} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 text-base font-semibold text-white shadow-[0_18px_40px_rgba(11,122,53,0.24)] transition-all hover:bg-primary-dark">
+                                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                            </svg>
+                                            Telecharger gratuitement
+                                        </button>
+                                    ) : (
+                                        <>
+                                            <button onClick={addToCart} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 text-base font-semibold text-white shadow-[0_18px_40px_rgba(11,122,53,0.24)] transition-all hover:bg-primary-dark">
+                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                                                </svg>
+                                                Ajouter au panier
+                                            </button>
+                                            <Link href="/checkout" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-white px-5 py-4 text-base font-semibold text-text-dark transition-all hover:border-primary/25 hover:text-primary">
+                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v9.575c0 .621-.504 1.125-1.125 1.125h-.75M3.75 4.5h-.75" />
+                                                </svg>
+                                                Acheter maintenant
+                                            </Link>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div className="mt-6 rounded-[24px] bg-[#0f2f23] p-5 text-white">
@@ -259,13 +300,13 @@ export default function ProductDetails() {
                             <InfoCard title="Description detaillee">
                                 <div className="space-y-4 text-sm leading-8 text-text-muted">
                                     <p>
-                                        Ce produit a ete concu pour offrir un resultat rapide, professionnel et simple a utiliser. Il aide les acheteurs a gagner du temps tout en profitant d un contenu utile, clair et adapte a leurs besoins.
+                                        Ce produit a ete prepare pour offrir un usage immediat, une structure claire et un rendu professionnel. Il aide l acheteur a aller plus vite avec un livrable deja pret a exploiter.
                                     </p>
                                     <p>
                                         Avec une note de {product.rating}/5 et {product.sales} ventes, ce produit fait partie des references qui inspirent confiance sur la marketplace. Vous obtenez un acces immediat apres votre paiement, sans attente.
                                     </p>
                                     <p>
-                                        Chaque ressource presentee ici suit une logique premium: execution rapide, design propre, orientation pratique et valeur reelle pour le contexte algerien.
+                                        Le vendeur a aussi precise les formats, la compatibilite, la licence et les elements inclus pour te permettre d acheter avec plus de clarte.
                                     </p>
                                 </div>
                             </InfoCard>
@@ -292,6 +333,19 @@ export default function ProductDetails() {
                                                     {item.label}
                                                 </p>
                                             </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </InfoCard>
+
+                            <InfoCard title="Apercu premium">
+                                <div className="grid gap-4 md:grid-cols-3">
+                                    {previewPoints.map((point, index) => (
+                                        <div key={point} className="rounded-[24px] border border-border/70 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbf9_100%)] p-5 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-sm font-bold text-white">
+                                                {index + 1}
+                                            </div>
+                                            <p className="mt-4 text-sm font-semibold leading-7 text-text-dark">{point}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -336,11 +390,54 @@ export default function ProductDetails() {
                                     ))}
                                 </div>
                             </InfoCard>
+
+                            <InfoCard title="FAQ produit">
+                                <div className="grid gap-4">
+                                    {faqItems.map((item, index) => (
+                                        <div key={`${item.question}-${index}`} className="rounded-[24px] border border-border/70 bg-[#fbfcfb] p-5">
+                                            <div className="flex items-start gap-3">
+                                                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary-light text-xs font-bold text-primary">
+                                                    ?
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-text-dark">{item.question}</p>
+                                                    <p className="mt-3 text-sm leading-7 text-text-muted">{item.answer}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </InfoCard>
+
+                            <InfoCard title="Instructions d utilisation">
+                                <div className="grid gap-3">
+                                    {usageInstructions.map((step, index) => (
+                                        <div key={`${step}-${index}`} className="flex items-start gap-4 rounded-[24px] border border-border/70 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbf9_100%)] p-5">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#112b21] text-sm font-bold text-white">
+                                                {index + 1}
+                                            </div>
+                                            <p className="pt-1 text-sm leading-7 text-text-muted">{step}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </InfoCard>
                         </div>
 
                         <div className="grid gap-6">
                             <InfoCard title="Informations produit">
                                 <div className="grid gap-4">
+                                    {product.item_count && (
+                                        <div className="flex items-center justify-between gap-4 text-sm">
+                                            <span className="text-text-muted">Elements inclus</span>
+                                            <span className="font-semibold text-text-dark">{product.item_count}</span>
+                                        </div>
+                                    )}
+                                    {product.pages && (
+                                        <div className="flex items-center justify-between gap-4 text-sm">
+                                            <span className="text-text-muted">Pages / slides</span>
+                                            <span className="font-semibold text-text-dark">{product.pages}</span>
+                                        </div>
+                                    )}
                                     <div className="flex items-center justify-between gap-4 text-sm">
                                         <span className="text-text-muted">Categorie</span>
                                         <Link href={`/categories/${product.categorySlug}`} className="font-semibold text-primary hover:underline">
@@ -357,8 +454,38 @@ export default function ProductDetails() {
                                     </div>
                                     <div className="flex items-center justify-between gap-4 text-sm">
                                         <span className="text-text-muted">Formats</span>
-                                        <span className="font-semibold text-text-dark">{fileFormats.slice(0, 2).join(', ')}</span>
+                                        <span className="font-semibold text-text-dark">{fileFormats.length ? fileFormats.join(', ') : 'Digital'}</span>
                                     </div>
+                                    {product.file_size_label && (
+                                        <div className="flex items-center justify-between gap-4 text-sm">
+                                            <span className="text-text-muted">Taille du pack</span>
+                                            <span className="font-semibold text-text-dark">{product.file_size_label}</span>
+                                        </div>
+                                    )}
+                                    {product.skill_level && (
+                                        <div className="flex items-center justify-between gap-4 text-sm">
+                                            <span className="text-text-muted">Niveau</span>
+                                            <span className="font-semibold text-text-dark capitalize">{product.skill_level}</span>
+                                        </div>
+                                    )}
+                                    {product.usage_license && (
+                                        <div className="flex items-center justify-between gap-4 text-sm">
+                                            <span className="text-text-muted">Licence</span>
+                                            <span className="font-semibold text-text-dark">{product.usage_license}</span>
+                                        </div>
+                                    )}
+                                    {product.version && (
+                                        <div className="flex items-center justify-between gap-4 text-sm">
+                                            <span className="text-text-muted">Version</span>
+                                            <span className="font-semibold text-text-dark">{product.version}</span>
+                                        </div>
+                                    )}
+                                    {product.last_updated_at && (
+                                        <div className="flex items-center justify-between gap-4 text-sm">
+                                            <span className="text-text-muted">Derniere mise a jour</span>
+                                            <span className="font-semibold text-text-dark">{product.last_updated_at}</span>
+                                        </div>
+                                    )}
                                     <div className="flex items-center justify-between gap-4 text-sm">
                                         <span className="text-text-muted">Livraison</span>
                                         <span className="font-semibold text-primary">Instantanee</span>
@@ -382,6 +509,21 @@ export default function ProductDetails() {
                                                 </svg>
                                             </div>
                                             <p className="text-sm leading-7 text-text-muted">{benefit}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </InfoCard>
+
+                            <InfoCard title="Compatibilite">
+                                <div className="grid gap-3">
+                                    {compatibilityItems.map((item) => (
+                                        <div key={item} className="flex items-center gap-3 rounded-2xl border border-border/70 bg-[#fbfcfb] p-4">
+                                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-light text-primary">
+                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                                </svg>
+                                            </div>
+                                            <p className="text-sm font-medium text-text-dark">{item}</p>
                                         </div>
                                     ))}
                                 </div>

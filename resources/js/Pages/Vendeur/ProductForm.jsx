@@ -11,26 +11,55 @@ export default function SellerProductForm() {
         category_id: product?.category_id || '',
         price: product?.price || '',
         product_type: product?.product_type || 'digital',
+        is_free: product?.is_free ?? false,
         description: product?.description || '',
         file_type: product?.file_type || 'zip',
         file_path: product?.file_path || '',
+        pages: product?.pages || '',
+        file_size_label: product?.file_size_label || '',
+        item_count: product?.item_count || '',
+        skill_level: product?.skill_level || 'debutant',
+        usage_license: product?.usage_license || 'Usage personnel',
+        version: product?.version || '1.0',
+        last_updated_at: product?.last_updated_at || '',
+        included_items_text: product?.included_items_text || '',
+        compatible_with_text: product?.compatible_with_text || '',
+        benefits_text: product?.benefits_text || '',
+        preview_points_text: product?.preview_points_text || '',
+        faq_items_text: product?.faq_items_text || '',
+        usage_instructions_text: product?.usage_instructions_text || '',
         product_file: null,
         product_image: null,
+        preview_images: [],
         is_active: product?.is_active ?? true,
     })
 
     const [saving, setSaving] = useState(false)
     const [imagePreview, setImagePreview] = useState(product?.image_url || null)
+    const [galleryPreview, setGalleryPreview] = useState(product?.preview_images || [])
 
     const update = (field) => (e) => {
         let value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
 
         if (e.target.type === 'file') {
-            value = e.target.files?.[0] || null
+            value = field === 'preview_images'
+                ? Array.from(e.target.files || [])
+                : (e.target.files?.[0] || null)
         }
 
         if (field === 'product_image' && value) {
             setImagePreview(URL.createObjectURL(value))
+        }
+
+        if (field === 'preview_images' && Array.isArray(value) && value.length) {
+            setGalleryPreview((current) => ([
+                ...current,
+                ...value.map((file, index) => ({
+                    id: `new-${Date.now()}-${index}`,
+                    url: URL.createObjectURL(file),
+                    is_primary: false,
+                })),
+            ]))
         }
 
         setForm((current) => ({ ...current, [field]: value }))
@@ -83,7 +112,7 @@ export default function SellerProductForm() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-text-dark mb-1.5">Prix (DZD)</label>
-                                <input type="number" min="0" value={form.price} onChange={update('price')} required className="w-full px-4 py-3 rounded-lg border border-border text-sm" />
+                                <input type="number" min="0" value={form.is_free ? 0 : form.price} onChange={update('price')} required disabled={form.is_free} className="w-full px-4 py-3 rounded-lg border border-border text-sm disabled:bg-gray-100 disabled:text-text-muted" />
                             </div>
                         </div>
 
@@ -94,6 +123,13 @@ export default function SellerProductForm() {
                                 <option value="service">Consulting / Service</option>
                             </select>
                         </div>
+
+                        {form.product_type === 'digital' && (
+                            <label className="flex items-center gap-3 cursor-pointer rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                                <input type="checkbox" checked={form.is_free} onChange={update('is_free')} className="w-4 h-4 accent-primary rounded" />
+                                <span className="text-sm text-text-dark font-medium">Rendre ce produit gratuit pour telechargement direct</span>
+                            </label>
+                        )}
 
                         {form.product_type === 'digital' ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -125,10 +161,98 @@ export default function SellerProductForm() {
                             )}
                         </div>
 
+                        {form.product_type === 'digital' && (
+                            <div>
+                                <label className="block text-sm font-medium text-text-dark mb-1.5">Galerie preview du produit</label>
+                                <input type="file" accept="image/*" multiple onChange={update('preview_images')} className="w-full px-4 py-3 rounded-lg border border-border text-sm bg-white" />
+                                <p className="mt-2 text-xs text-text-muted">Ajoute plusieurs visuels pour montrer des pages, mockups, slides ou extraits du produit.</p>
+                                {galleryPreview.length > 0 && (
+                                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                        {galleryPreview.map((image) => (
+                                            <div key={image.id} className="overflow-hidden rounded-xl border border-border bg-gray-50">
+                                                <img src={image.url} alt="Preview produit" className="h-24 w-full object-cover" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div>
                             <label className="block text-sm font-medium text-text-dark mb-1.5">Description</label>
                             <textarea value={form.description} onChange={update('description')} rows={5} className="w-full px-4 py-3 rounded-lg border border-border text-sm resize-y" />
                         </div>
+
+                        {form.product_type === 'digital' && (
+                            <div className="rounded-[28px] border border-border bg-[#fbfcfb] p-5 md:p-6">
+                                <div className="mb-5">
+                                    <h2 className="text-lg font-bold text-text-dark">Details premium du fichier</h2>
+                                    <p className="mt-1 text-sm text-text-muted">Ces informations seront affichees sur la page produit pour rassurer l acheteur avant paiement.</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Nombre d elements</label>
+                                        <input type="number" min="1" value={form.item_count} onChange={update('item_count')} placeholder="Ex: 24" className="w-full px-4 py-3 rounded-lg border border-border text-sm" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Taille du pack</label>
+                                        <input type="text" value={form.file_size_label} onChange={update('file_size_label')} placeholder="Ex: 48 MB" className="w-full px-4 py-3 rounded-lg border border-border text-sm" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Nombre de pages</label>
+                                        <input type="number" min="1" value={form.pages} onChange={update('pages')} placeholder="Ex: 85" className="w-full px-4 py-3 rounded-lg border border-border text-sm" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Niveau</label>
+                                        <select value={form.skill_level} onChange={update('skill_level')} className="w-full px-4 py-3 rounded-lg border border-border text-sm bg-white">
+                                            <option value="debutant">Debutant</option>
+                                            <option value="intermediaire">Intermediaire</option>
+                                            <option value="avance">Avance</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Licence</label>
+                                        <input type="text" value={form.usage_license} onChange={update('usage_license')} placeholder="Usage personnel / commercial" className="w-full px-4 py-3 rounded-lg border border-border text-sm" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Version</label>
+                                        <input type="text" value={form.version} onChange={update('version')} placeholder="Ex: 1.2" className="w-full px-4 py-3 rounded-lg border border-border text-sm" />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Derniere mise a jour</label>
+                                        <input type="date" value={form.last_updated_at} onChange={update('last_updated_at')} className="w-full px-4 py-3 rounded-lg border border-border text-sm bg-white" />
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 grid gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Contenu inclus</label>
+                                        <textarea value={form.included_items_text} onChange={update('included_items_text')} rows={5} placeholder={'Un element par ligne\nEx: 12 templates Canva\nGuide PDF de prise en main\n3 bonus exclusifs'} className="w-full px-4 py-3 rounded-lg border border-border text-sm resize-y" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Compatibilite</label>
+                                        <textarea value={form.compatible_with_text} onChange={update('compatible_with_text')} rows={4} placeholder={'Un element par ligne\nEx: Canva Free\nCanva Pro\nMobile et ordinateur'} className="w-full px-4 py-3 rounded-lg border border-border text-sm resize-y" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Benefices acheteur</label>
+                                        <textarea value={form.benefits_text} onChange={update('benefits_text')} rows={4} placeholder={'Un benefice par ligne\nEx: Gain de temps immediat\nAdapte au marche algerien'} className="w-full px-4 py-3 rounded-lg border border-border text-sm resize-y" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Points d apercu premium</label>
+                                        <textarea value={form.preview_points_text} onChange={update('preview_points_text')} rows={4} placeholder={'Un point par ligne\nEx: Sommaire clair et professionnel\nDesign facile a personnaliser'} className="w-full px-4 py-3 rounded-lg border border-border text-sm resize-y" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">FAQ produit</label>
+                                        <textarea value={form.faq_items_text} onChange={update('faq_items_text')} rows={5} placeholder={'Une question par ligne au format:\nQuestion ? | Reponse\nEx: Canva Pro est il obligatoire ? | Non, le produit fonctionne aussi avec Canva Free.'} className="w-full px-4 py-3 rounded-lg border border-border text-sm resize-y" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-dark mb-1.5">Instructions d utilisation</label>
+                                        <textarea value={form.usage_instructions_text} onChange={update('usage_instructions_text')} rows={5} placeholder={'Une etape par ligne\nEx: Telechargez le fichier ZIP\nOuvrez le dossier principal\nPersonnalisez les fichiers selon votre besoin'} className="w-full px-4 py-3 rounded-lg border border-border text-sm resize-y" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <label className="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" checked={form.is_active} onChange={update('is_active')} className="w-4 h-4 accent-primary rounded" />
