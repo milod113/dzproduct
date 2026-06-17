@@ -1,3 +1,51 @@
+# dzproduct
+
+Petite application e-commerce Laravel pour gérer des produits numériques.
+
+## Installation (développement)
+
+1. Cloner le dépôt
+
+```bash
+git clone https://github.com/milod113/dzproduct.git
+cd dzproduct
+```
+
+2. Copier l'exemple d'environnement et installer les dépendances
+
+```bash
+cp .env.example .env
+composer install
+npm install
+npm run build
+```
+
+3. Générer la clé d'application et migrer la base (SQLite par défaut)
+
+```bash
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate
+```
+
+4. Lancer le serveur local
+
+```bash
+php artisan serve
+```
+
+## Tests
+
+Exécuter les tests PHPUnit:
+
+```bash
+./vendor/bin/phpunit
+```
+
+## Remarques
+
+- Ne commitez jamais votre fichier `.env` contenant des secrets.
+- Consultez le fichier `.gitignore` pour les fichiers exclus.
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
