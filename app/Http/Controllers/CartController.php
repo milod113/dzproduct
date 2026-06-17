@@ -64,14 +64,27 @@ class CartController extends Controller
         ];
 
         session()->put('cart', $cart);
+
+        if ($request->user()) {
+            $request->user()->update(['last_cart_activity_at' => now()]);
+        }
+
         return back()->with('toast', 'Produit ajouté au panier');
     }
 
-    public function remove($cartId)
+    public function remove(Request $request, $cartId)
     {
         $cart = session()->get('cart', []);
         $cart = array_values(array_filter($cart, fn ($item) => $item['cart_id'] !== $cartId));
         session()->put('cart', $cart);
+
+        if ($request->user()) {
+            $emptyCart = empty($cart);
+            $request->user()->update([
+                'last_cart_activity_at' => $emptyCart ? null : now(),
+            ]);
+        }
+
         return back()->with('toast', 'Produit retiré du panier');
     }
 

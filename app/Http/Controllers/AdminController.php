@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\WithdrawalRequest;
 use App\Models\SellerPlanRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -12,6 +13,77 @@ use Inertia\Inertia;
 
 class AdminController extends Controller
 {
+    public function affiliateWithdrawals()
+    {
+        $withdrawals = WithdrawalRequest::with(['user', 'processor'])
+            ->latest()
+            ->get()
+            ->map(fn ($withdrawal) => [
+                'id' => $withdrawal->id,
+                'seller' => [
+                    'id' => $withdrawal->user?->id,
+                    'name' => $withdrawal->user?->name ?? 'Affilie',
+                    'email' => $withdrawal->user?->email,
+                    'phone' => $withdrawal->user?->phone,
+                    'wilaya' => $withdrawal->user?->wilaya,
+                ],
+                'amount' => (float) $withdrawal->amount,
+                'payment_method' => $withdrawal->payment_method,
+                'account_info' => $withdrawal->account_info,
+                'notes' => $withdrawal->notes,
+                'status' => $withdrawal->status,
+                'admin_notes' => $withdrawal->admin_notes,
+                'created_at' => $withdrawal->created_at->format('d/m/Y'),
+                'processed_at' => $withdrawal->processed_at?->format('d/m/Y'),
+                'processed_by_name' => $withdrawal->processor?->name,
+            ]);
+
+        return Inertia::render('Admin/AffiliateWithdrawals', [
+            'withdrawals' => $withdrawals,
+            'stats' => [
+                'total' => $withdrawals->count(),
+                'pending' => $withdrawals->where('status', WithdrawalRequest::STATUS_PENDING)->count(),
+                'approved' => $withdrawals->where('status', WithdrawalRequest::STATUS_APPROVED)->count(),
+                'paid' => $withdrawals->where('status', WithdrawalRequest::STATUS_PAID)->count(),
+                'rejected' => $withdrawals->where('status', WithdrawalRequest::STATUS_REJECTED)->count(),
+                'pendingAmount' => (float) $withdrawals->where('status', WithdrawalRequest::STATUS_PENDING)->sum('amount'),
+                'paidAmount' => (float) $withdrawals->where('status', WithdrawalRequest::STATUS_PAID)->sum('amount'),
+            ],
+        ]);
+    }
+
+    public function affiliateWithdrawalUpdate(Request $request, $id)
+    {
+        $withdrawal = WithdrawalRequest::with('user')->findOrFail($id);
+
+        $validated = $request->validate([
+            'status' => 'required|in:approved,paid,rejected',
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $nextStatus = $validated['status'];
+        $currentStatus = $withdrawal->status;
+
+        if ($currentStatus === WithdrawalRequest::STATUS_PAID) {
+            return back()->with('toast', 'Ce retrait a deja ete marque comme paye.');
+        }
+
+        if ($nextStatus === WithdrawalRequest::STATUS_REJECTED && $currentStatus !== WithdrawalRequest::STATUS_REJECTED) {
+            $withdrawal->user?->increment('referral_balance', (float) $withdrawal->amount);
+        }
+
+        $withdrawal->update([
+            'status' => $nextStatus,
+            'admin_notes' => $validated['admin_notes'] ?? null,
+            'processed_by' => auth()->id(),
+            'processed_at' => in_array($nextStatus, [WithdrawalRequest::STATUS_APPROVED, WithdrawalRequest::STATUS_PAID, WithdrawalRequest::STATUS_REJECTED], true)
+                ? now()
+                : null,
+        ]);
+
+        return back()->with('toast', 'Le statut du retrait a ete mis a jour.');
+    }
+
     public function sellers()
     {
         $sellers = User::where('role', 'seller')

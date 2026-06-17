@@ -1,0 +1,77 @@
+Plan De Securite Laravel
+Audit Initialcartographier tous les flux sensibles: auth, checkout, affiliation, retraits, plans vendeurs, admin
+lister les routes critiques et les roles autorises
+identifier toutes les colonnes financieres: price, total, commission_amount, referral_balance, amount
+
+Securite D Accesactiver verification email obligatoire
+ajouter 2FA pour admin et seller
+renforcer middleware par role
+ajouter policies pour produits, commandes, retraits, commissions, missions
+mettre rate limiting sur login, register, contact, retraits, coupons
+
+Durcissement Des Flux Financiersrecalculer tous les montants uniquement backend
+encapsuler checkout, payment callback, withdrawal request, admin payout dans DB::transaction()
+rendre les paiements et callbacks idempotents
+interdire double traitement de commande ou double retrait
+centraliser les changements de statut financier
+
+Validation Et Integrite Metiervalider strictement tous les inputs avec FormRequest
+utiliser decimal partout pour l argent
+ajouter contraintes SQL: foreign keys, unique, indexes
+normaliser les statuts avec constantes ou enums
+empecher valeurs negatives, incoherentes ou non autorisees
+
+Journalisation Et Auditenregistrer chaque action critique: paiement, commission, retrait, changement admin
+stocker who, what, when, before, after
+garder un historique complet des transitions de statut
+creer un journal admin consultable
+
+Protection Des Paiementsverifier signature ou secret des callbacks si passerelle reelle
+journaliser tous les callbacks recus
+comparer transaction_id, order_id, amount, status
+rejeter callbacks invalides ou dupliques
+ne jamais valider une commande depuis le frontend
+
+Securite Affiliation Et Commissionsgenerer referral_code uniques
+empecher auto-affiliation
+limiter duree cookie affiliation
+crediter commissions seulement sur commande payee
+ajouter controles anti-fraude sur clics et conversions anormales
+
+Securite Retraitsexiger validation admin avant paiement
+verifier solde reel au moment de la demande et du traitement
+reserver les montants pour eviter double retrait
+notifier a chaque changement pending, approved, paid, rejected
+ajouter seuil minimum et controles de frequence
+
+Securite Fichiers Et Uploadsvalider type MIME, extension, taille
+renommer fichiers cote serveur
+stocker hors acces public direct si possible
+servir via routes securisees pour contenus payants
+scanner antivirus si tu passes en prod serieuse
+
+Configuration Et Infraforcer HTTPS
+activer cookies secure, httpOnly, sameSite
+proteger .env
+rotation reguliere des secrets
+backups automatiques et testes
+permissions serveur minimales
+
+Monitoring Et Alertessurveiller erreurs paiement, retraits echoues, pics d activite
+alerter sur anomalies: trop de retraits, trop de coupons, trop d essais login
+tableau de bord securite admin
+logs centralises si possible
+
+Tests Et Verification Continuetests feature pour auth, checkout, retraits, admin
+tests de non-regression sur montants et permissions
+tests d acces interdit par role
+tests de concurrence sur retraits et callbacks
+revue securite avant chaque mise en production
+
+Ordre D Implementation Recommandeemail verification + role/policy + rate limiting
+transactions DB sur checkout et retraits
+audit logs
+hardening paiements
+2FA admin/seller
+upload security
+monitoring et alertes

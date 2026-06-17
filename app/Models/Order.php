@@ -26,6 +26,16 @@ class Order extends Model
         ];
     }
 
+    public function scopePendingPayment($query)
+    {
+        return $query->where('status', 'pending_payment');
+    }
+
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', 'completed');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

@@ -1,8 +1,9 @@
-import { Link, router, usePage } from '@inertiajs/react'
+import { Link, usePage } from '@inertiajs/react'
 import { useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import ProductCard from '@/Components/ProductCard'
 import SellerBadges from '@/Components/SellerBadges'
+import AffiliateSharePanel from '@/Components/AffiliateSharePanel'
 
 const mockReviews = [
     {
@@ -276,6 +277,7 @@ export default function ProductDetails() {
                                             </Link>
                                         </>
                                     )}
+
                                 </div>
 
                                 <div className="mt-6 rounded-[24px] bg-[#0f2f23] p-5 text-white">
@@ -290,6 +292,10 @@ export default function ProductDetails() {
                                             <p className="mt-1 text-xs text-emerald-100/80">Acces a vie et support marketplace apres achat.</p>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div className="mt-6">
+                                    <AffiliateSharePanel product={product} />
                                 </div>
                             </div>
                         </div>

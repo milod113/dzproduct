@@ -15,6 +15,13 @@ class Payment extends Model
         'transaction_id',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'amount' => 'decimal:2',
+        ];
+    }
+
     public function order()
     {
         return $this->belongsTo(Order::class);

@@ -89,6 +89,7 @@ export default function AppLayout({ children }) {
                                 <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-200/75">Navigation</h4>
                                 <div className="mt-5 flex flex-col gap-3">
                                     <Link href="/boutique" className="text-sm text-emerald-50/78 transition-colors hover:text-white">Boutique</Link>
+                                    <Link href="/espace-etudiant" className="text-sm text-emerald-50/78 transition-colors hover:text-white">Espace Etudiant</Link>
                                     <Link href="/categories" className="text-sm text-emerald-50/78 transition-colors hover:text-white">Categories</Link>
                                     <Link href="/blog" className="text-sm text-emerald-50/78 transition-colors hover:text-white">Blog</Link>
                                     <Link href="/a-propos" className="text-sm text-emerald-50/78 transition-colors hover:text-white">A propos</Link>

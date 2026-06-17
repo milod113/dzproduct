@@ -21,6 +21,10 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
+            'twoFactor' => [
+                'eligible' => in_array($request->user()->role, ['admin', 'seller'], true),
+                'enabled' => (bool) $request->user()->two_factor_enabled,
+            ],
         ]);
     }
 
@@ -38,6 +42,29 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return Redirect::route('profile.edit');
+    }
+
+    public function updateTwoFactor(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        abort_unless(in_array($user->role, ['admin', 'seller'], true), 403);
+
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        $enabled = (bool) $validated['enabled'];
+
+        $user->forceFill([
+            'two_factor_enabled' => $enabled,
+            'two_factor_code' => null,
+            'two_factor_expires_at' => null,
+        ])->save();
+
+        return Redirect::route('profile.edit')->with('toast', $enabled
+            ? 'La verification en deux etapes est activee.'
+            : 'La verification en deux etapes est desactivee.');
     }
 
     /**

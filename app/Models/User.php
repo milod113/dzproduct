@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Notifications\TwoFactorCodeNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable
 {
@@ -28,11 +30,18 @@ class User extends Authenticatable
         'is_official_partner',
         'seller_since',
         'is_available_for_freelance',
+        'referral_code',
+        'referred_by',
+        'referral_balance',
+        'two_factor_enabled',
+        'two_factor_code',
+        'two_factor_expires_at',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_code',
     ];
 
     protected function casts(): array
@@ -48,7 +57,27 @@ class User extends Authenticatable
             'is_available_for_freelance' => 'boolean',
             'seller_plan_started_at' => 'datetime',
             'seller_plan_expires_at' => 'datetime',
+            'referral_balance' => 'decimal:2',
+            'two_factor_enabled' => 'boolean',
+            'two_factor_expires_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if (empty($user->referral_code)) {
+                $user->referral_code = self::generateReferralCode();
+            }
+        });
+    }
+
+    public static function generateReferralCode(): string
+    {
+        do {
+            $code = 'REF-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+        } while (static::where('referral_code', $code)->exists());
+        return $code;
     }
 
     public const SELLER_PLAN_STARTER = 'starter';
@@ -68,6 +97,25 @@ class User extends Authenticatable
     public function isClient(): bool
     {
         return $this->role === 'client';
+    }
+
+    public function requiresTwoFactor(): bool
+    {
+        return in_array($this->role, ['admin', 'seller'], true) && $this->two_factor_enabled;
+    }
+
+    public function sendTwoFactorCode(): string
+    {
+        $code = (string) random_int(100000, 999999);
+
+        $this->forceFill([
+            'two_factor_code' => Hash::make($code),
+            'two_factor_expires_at' => now()->addMinutes(10),
+        ])->save();
+
+        $this->notify(new TwoFactorCodeNotification($code));
+
+        return $code;
     }
 
     public function sellerPlanLabel(): string
@@ -165,6 +213,26 @@ class User extends Authenticatable
     public function wishlistProducts()
     {
         return $this->belongsToMany(Product::class, 'wishlists')->withTimestamps();
+    }
+
+    public function referredBy()
+    {
+        return $this->belongsTo(User::class, 'referred_by');
+    }
+
+    public function referrals()
+    {
+        return $this->hasMany(User::class, 'referred_by');
+    }
+
+    public function commissions()
+    {
+        return $this->hasMany(ReferralCommission::class, 'affiliate_id');
+    }
+
+    public function withdrawalRequests()
+    {
+        return $this->hasMany(WithdrawalRequest::class);
     }
 
     public function sellerPlanRequests()

@@ -1,39 +1,39 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import ClientLayout from '@/Layouts/ClientLayout';
 import DeleteUserForm from './Partials/DeleteUserForm';
+import UpdateTwoFactorForm from './Partials/UpdateTwoFactorForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 
-export default function Edit({ mustVerifyEmail, status }) {
+function Surface({ children, className = '' }) {
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Profile
-                </h2>
-            }
-        >
-            <Head title="Profile" />
+        <section className={`overflow-hidden rounded-[30px] border border-white/70 bg-white/90 shadow-[0_24px_70px_rgba(15,23,42,0.09)] backdrop-blur ${className}`}>
+            {children}
+        </section>
+    )
+}
 
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <UpdateProfileInformationForm
-                            mustVerifyEmail={mustVerifyEmail}
-                            status={status}
-                            className="max-w-xl"
-                        />
-                    </div>
+export default function Edit({ mustVerifyEmail, status, twoFactor }) {
+    return (
+        <ClientLayout title="Profil">
+            <div className="flex flex-col gap-6">
+                <Surface>
+                    <UpdateProfileInformationForm mustVerifyEmail={mustVerifyEmail} status={status} />
+                </Surface>
 
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <UpdatePasswordForm className="max-w-xl" />
-                    </div>
+                <Surface>
+                    <UpdatePasswordForm />
+                </Surface>
 
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <DeleteUserForm className="max-w-xl" />
-                    </div>
-                </div>
+                {twoFactor?.eligible && (
+                    <Surface>
+                        <UpdateTwoFactorForm twoFactor={twoFactor} />
+                    </Surface>
+                )}
+
+                <Surface className="border-rose-100/70">
+                    <DeleteUserForm />
+                </Surface>
             </div>
-        </AuthenticatedLayout>
+        </ClientLayout>
     );
 }

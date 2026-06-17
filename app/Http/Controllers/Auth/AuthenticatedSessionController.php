@@ -35,6 +35,14 @@ class AuthenticatedSessionController extends Controller
 
         $user = $request->user();
 
+        if ($user && $user->requiresTwoFactor()) {
+            $request->session()->forget('auth.2fa_passed');
+            $user->sendTwoFactorCode();
+
+            return redirect()->route('two-factor.challenge')
+                ->with('status', 'Un code de verification a ete envoye a votre adresse email.');
+        }
+
         $destination = match ($user?->role) {
             'admin' => route('admin.dashboard', absolute: false),
             'seller' => route('vendeur.dashboard', absolute: false),
@@ -51,6 +59,7 @@ class AuthenticatedSessionController extends Controller
     {
         Auth::guard('web')->logout();
 
+        $request->session()->forget('auth.2fa_passed');
         $request->session()->invalidate();
 
         $request->session()->regenerateToken();

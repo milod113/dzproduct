@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DownloadController;
+use App\Http\Controllers\PaymentCallbackController;
 use App\Http\Controllers\FreeProductController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SellerMessageController;
@@ -20,6 +23,7 @@ use Inertia\Inertia;
 Route::get('/', [PageController::class, 'home'])->name('home');
 
 Route::get('/boutique', [PageController::class, 'shop'])->name('shop');
+Route::get('/espace-etudiant', [PageController::class, 'studentSpace'])->name('student.space');
 Route::get('/gratuits', [PageController::class, 'freeProducts'])->name('free.products');
 Route::get('/boutique/{slug}', [PageController::class, 'productDetails'])->name('product.details');
 Route::get('/vendeurs/{id}', [PageController::class, 'sellerProfile'])->name('seller.profile');
@@ -53,6 +57,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::post('/checkout/coupon', [CheckoutController::class, 'validateCoupon'])->name('checkout.coupon');
+
+    Route::get('/paiement/simule/{transaction_id}/{order_id}', [PaymentCallbackController::class, 'simulatedForm'])->name('payment.simulated.form');
+    Route::post('/paiement/simule/confirmer', [PaymentCallbackController::class, 'simulatedConfirm'])->name('payment.simulated.confirm');
+    Route::get('/paiement/retour', [PaymentCallbackController::class, 'returnCallback'])->name('payment.return');
+    Route::get('/paiement/annuler', [PaymentCallbackController::class, 'cancel'])->name('payment.cancel');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::get('/mes-services', [ServiceMissionController::class, 'clientIndex'])->name('client.services.index');
@@ -62,10 +71,14 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/mes-services/{id}/action', [ServiceMissionController::class, 'clientAction'])->name('client.services.action');
 
     Route::get('/telechargement/{productId}', [DownloadController::class, 'download'])->name('download.file');
+    Route::get('/factures/{invoice}/telecharger', [InvoiceController::class, 'download'])->name('invoice.download');
+    Route::get('/affiliation', [AffiliateController::class, 'dashboard'])->name('affiliate.dashboard');
+    Route::post('/affiliation/generer-code', [AffiliateController::class, 'generateCode'])->name('affiliate.generate');
+    Route::post('/affiliation/retraits', [AffiliateController::class, 'requestWithdrawal'])->name('affiliate.withdrawals.store');
     Route::post('/gratuits/{productId}/telecharger', [FreeProductController::class, 'claim'])->name('free.products.claim');
 });
 
-Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
+Route::prefix('admin')->middleware(['auth', 'admin', 'twofactor'])->group(function () {
     Route::get('/', fn () => Inertia::render('Admin/Dashboard'))->name('admin.dashboard');
 
     Route::get('/produits', [AdminController::class, 'products'])->name('admin.products');
@@ -80,6 +93,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/clients', fn () => Inertia::render('Admin/Customers'))->name('admin.customers');
     Route::get('/vendeurs', [AdminController::class, 'sellers'])->name('admin.sellers');
     Route::patch('/vendeurs/{id}', [AdminController::class, 'sellerUpdate'])->name('admin.sellers.update');
+    Route::get('/affiliation/retraits', [AdminController::class, 'affiliateWithdrawals'])->name('admin.affiliate-withdrawals');
+    Route::patch('/affiliation/retraits/{id}', [AdminController::class, 'affiliateWithdrawalUpdate'])->name('admin.affiliate-withdrawals.update');
     Route::post('/vendeurs/{sellerId}/messages', [SellerMessageController::class, 'storeFromAdmin'])->name('admin.sellers.messages.store');
     Route::get('/demandes-plans-vendeurs', [SellerPlanRequestController::class, 'adminIndex'])->name('admin.seller-plan-requests');
     Route::patch('/demandes-plans-vendeurs/{id}/approve', [SellerPlanRequestController::class, 'approve'])->name('admin.seller-plan-requests.approve');
@@ -93,10 +108,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/two-factor', [ProfileController::class, 'updateTwoFactor'])->name('profile.two-factor.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware(['auth', 'seller'])->prefix('vendeur')->group(function () {
+Route::middleware(['auth', 'seller', 'twofactor'])->prefix('vendeur')->group(function () {
     Route::get('/', [PageController::class, 'vendeurDashboard'])->name('vendeur.dashboard');
     Route::get('/profil', [SellerProfileController::class, 'edit'])->name('vendeur.profile.edit');
     Route::patch('/profil', [SellerProfileController::class, 'update'])->name('vendeur.profile.update');
@@ -117,6 +133,8 @@ Route::middleware(['auth', 'seller'])->prefix('vendeur')->group(function () {
     Route::get('/commandes', [PageController::class, 'vendeurCommandes'])->name('vendeur.commandes');
     Route::get('/revenus', [PageController::class, 'vendeurRevenus'])->name('vendeur.revenus');
 });
+
+Route::post('/api/payment/callback', [PaymentCallbackController::class, 'callback'])->name('payment.callback');
 
 Route::get('/connexion', fn () => Inertia::render('Login'))->name('connexion');
 Route::get('/inscription', fn () => Inertia::render('Register'))->name('inscription');

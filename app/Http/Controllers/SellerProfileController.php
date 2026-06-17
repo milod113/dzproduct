@@ -34,6 +34,7 @@ class SellerProfileController extends Controller
                 'can_use_custom_whatsapp_cta' => $user->canUseCustomWhatsappCta(),
                 'whatsapp_cta_text' => $user->whatsapp_cta_text,
                 'is_available_for_freelance' => (bool) $user->is_available_for_freelance,
+                'two_factor_enabled' => (bool) $user->two_factor_enabled,
                 'role' => $user->role,
                 'public_url' => route('seller.profile', $user->id),
             ],

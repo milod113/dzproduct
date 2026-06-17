@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react'
 import SellerBadges from '@/Components/SellerBadges'
+import AffiliateSharePanel from '@/Components/AffiliateSharePanel'
 
 function RatingRow({ rating, sales }) {
     return (
@@ -39,8 +40,8 @@ function StudentBadge({ badge }) {
 }
 
 export default function ProductCard({ product }) {
-    const { auth } = usePage().props
     const studentBadges = product.student_badges || []
+    const { auth } = usePage().props
 
     const addToCart = () => {
         router.post('/panier/ajouter', { product_id: product.id }, {
@@ -192,6 +193,10 @@ export default function ProductCard({ product }) {
                             {product.product_type === 'service' ? 'Reserver' : 'Ajouter'}
                         </button>
                     )}
+                </div>
+
+                <div className="mt-3">
+                    <AffiliateSharePanel product={product} compact />
                 </div>
             </div>
         </article>

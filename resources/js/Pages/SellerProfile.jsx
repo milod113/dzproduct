@@ -42,8 +42,21 @@ export default function SellerProfile() {
                         <div className="rounded-[32px] border border-primary/10 bg-white p-6 shadow-[0_22px_55px_rgba(15,23,42,0.08)] md:p-8">
                             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                                 <div className="flex items-start gap-4">
-                                    <div className="flex h-18 w-18 shrink-0 items-center justify-center rounded-[24px] bg-[linear-gradient(135deg,#e8f5e9_0%,#ffffff_55%,#dff1e4_100%)] px-5 py-4 text-2xl font-bold text-primary shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
-                                        {seller.name.split(' ').map((part) => part[0]).join('').slice(0, 2)}
+                                    <div className="h-18 w-18 shrink-0 overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,#e8f5e9_0%,#ffffff_55%,#dff1e4_100%)] shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+                                        {seller.avatar ? (
+                                            <img
+                                                src={seller.avatar}
+                                                alt={seller.name}
+                                                className="h-full w-full object-cover"
+                                                onError={(event) => {
+                                                    event.currentTarget.style.display = 'none'
+                                                    event.currentTarget.nextSibling.style.display = 'flex'
+                                                }}
+                                            />
+                                        ) : null}
+                                        <div className={`${seller.avatar ? 'hidden' : 'flex'} h-full w-full items-center justify-center px-5 py-4 text-2xl font-bold text-primary`}>
+                                            {seller.name.split(' ').map((part) => part[0]).join('').slice(0, 2)}
+                                        </div>
                                     </div>
                                     <div>
                                         <p className="text-xs uppercase tracking-[0.2em] text-primary">Createur Algerien</p>

@@ -12,9 +12,11 @@ use App\Models\BlogPost;
 use App\Models\Coupon;
 use App\Models\Download;
 use App\Models\Payment;
+use App\Models\ReferralCommission;
 use App\Models\SellerMessage;
 use App\Models\ServiceMission;
 use App\Models\ServiceMissionMessage;
+use App\Models\WithdrawalRequest;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -35,6 +37,7 @@ class DatabaseSeeder extends Seeder
             'wilaya'           => 'Alger',
             'is_admin'         => true,
             'role'             => 'admin',
+            'two_factor_enabled' => true,
             'email_verified_at'=> now(),
             'password'         => bcrypt('password'),
         ]);
@@ -107,6 +110,7 @@ class DatabaseSeeder extends Seeder
         foreach ($sellers as $s) {
             $user = User::factory()->create(array_merge($s, [
                 'role'              => 'seller',
+                'two_factor_enabled'=> true,
                 'email_verified_at' => now(),
                 'password'          => bcrypt('password'),
             ]));
@@ -763,5 +767,213 @@ class DatabaseSeeder extends Seeder
             'subject' => 'Demande d informations',
             'message' => 'Je souhaite savoir si une mise a jour est incluse apres achat et si le contenu convient aux debutants.',
         ]);
+
+        // AFFILIATION
+        $affiliateAhmed = User::where('email', 'mohamed@email.dz')->first();
+        $affiliateNadia = User::where('email', 'nadia@email.dz')->first();
+        $affiliateAmine = User::where('email', 'amine@email.dz')->first();
+
+        if ($affiliateAhmed && $affiliateNadia && $affiliateAmine) {
+            $affiliateAhmed->update([
+                'referral_code' => 'REF-MOHAMED1',
+                'referral_balance' => 0,
+            ]);
+
+            $affiliateNadia->update([
+                'referral_code' => 'REF-NADIA01',
+                'referral_balance' => 0,
+            ]);
+
+            $affiliateAmine->update([
+                'referral_code' => 'REF-AMINE01',
+                'referral_balance' => 0,
+            ]);
+
+            $referredYasmine = User::where('email', 'yasmine@email.dz')->first();
+            $referredLina = User::where('email', 'lina@email.dz')->first();
+            $referredOmar = User::where('email', 'omar@email.dz')->first();
+
+            if ($referredYasmine) {
+                $referredYasmine->update(['referred_by' => $affiliateAhmed->id]);
+            }
+
+            if ($referredLina) {
+                $referredLina->update(['referred_by' => $affiliateNadia->id]);
+            }
+
+            if ($referredOmar) {
+                $referredOmar->update(['referred_by' => $affiliateAmine->id]);
+            }
+
+            $completedOrders = Order::where('status', 'completed')
+                ->with('items')
+                ->orderBy('created_at')
+                ->get();
+
+            $affiliateScenarios = [
+                [
+                    'affiliate' => $affiliateAhmed,
+                    'entries' => [
+                        [
+                            'order_index' => 0,
+                            'product_offset' => 0,
+                            'rate' => 10,
+                            'status' => 'paid',
+                            'created_at' => Carbon::now()->subDays(52),
+                            'paid_at' => Carbon::now()->subDays(30),
+                        ],
+                        [
+                            'order_index' => 1,
+                            'product_offset' => 1,
+                            'rate' => 10,
+                            'status' => 'approved',
+                            'created_at' => Carbon::now()->subDays(34),
+                            'paid_at' => null,
+                        ],
+                        [
+                            'order_index' => 2,
+                            'product_offset' => 0,
+                            'rate' => 8,
+                            'status' => 'pending',
+                            'created_at' => Carbon::now()->subDays(9),
+                            'paid_at' => null,
+                        ],
+                    ],
+                    'withdrawals' => [
+                        [
+                            'amount' => 900,
+                            'payment_method' => 'ccp',
+                            'account_info' => 'CCP 0123456789 Cle 44 - Mohamed A.',
+                            'status' => 'paid',
+                            'created_at' => Carbon::now()->subDays(27),
+                            'processed_at' => Carbon::now()->subDays(25),
+                            'admin_notes' => 'Retrait mensuel deja verse.',
+                        ],
+                    ],
+                ],
+                [
+                    'affiliate' => $affiliateNadia,
+                    'entries' => [
+                        [
+                            'order_index' => 3,
+                            'product_offset' => 0,
+                            'rate' => 10,
+                            'status' => 'approved',
+                            'created_at' => Carbon::now()->subDays(12),
+                            'paid_at' => null,
+                        ],
+                        [
+                            'order_index' => 4,
+                            'product_offset' => 1,
+                            'rate' => 5,
+                            'status' => 'pending',
+                            'created_at' => Carbon::now()->subDays(6),
+                            'paid_at' => null,
+                        ],
+                    ],
+                    'withdrawals' => [
+                        [
+                            'amount' => 600,
+                            'payment_method' => 'baridimob',
+                            'account_info' => 'BaridiMob 0555123456 - Nadia R.',
+                            'status' => 'pending',
+                            'created_at' => Carbon::now()->subDays(2),
+                            'processed_at' => null,
+                            'admin_notes' => null,
+                        ],
+                    ],
+                ],
+                [
+                    'affiliate' => $affiliateAmine,
+                    'entries' => [
+                        [
+                            'order_index' => 5,
+                            'product_offset' => 0,
+                            'rate' => 10,
+                            'status' => 'paid',
+                            'created_at' => Carbon::now()->subDays(18),
+                            'paid_at' => Carbon::now()->subDays(7),
+                        ],
+                        [
+                            'order_index' => 0,
+                            'product_offset' => 2,
+                            'rate' => 7,
+                            'status' => 'rejected',
+                            'created_at' => Carbon::now()->subDays(16),
+                            'paid_at' => null,
+                        ],
+                    ],
+                    'withdrawals' => [
+                        [
+                            'amount' => 500,
+                            'payment_method' => 'bank_transfer',
+                            'account_info' => 'Banque CPA - RIB 007999000111222333 - Amine L.',
+                            'status' => 'rejected',
+                            'created_at' => Carbon::now()->subDays(11),
+                            'processed_at' => Carbon::now()->subDays(10),
+                            'admin_notes' => 'Coordonnees bancaires incompletes, merci de renvoyer une demande.',
+                        ],
+                    ],
+                ],
+            ];
+
+            foreach ($affiliateScenarios as $scenario) {
+                $affiliate = $scenario['affiliate'];
+                $availableBalance = 0;
+
+                foreach ($scenario['entries'] as $entry) {
+                    $order = $completedOrders->get($entry['order_index']);
+
+                    if (!$order || $order->items->isEmpty()) {
+                        continue;
+                    }
+
+                    $orderItem = $order->items->values()->get($entry['product_offset']) ?? $order->items->first();
+                    $orderAmount = (float) $orderItem->price;
+                    $commissionAmount = round($orderAmount * ($entry['rate'] / 100), 2);
+
+                    ReferralCommission::create([
+                        'order_id' => $order->id,
+                        'affiliate_id' => $affiliate->id,
+                        'product_id' => $orderItem->product_id,
+                        'order_amount' => $orderAmount,
+                        'commission_rate' => $entry['rate'],
+                        'commission_amount' => $commissionAmount,
+                        'status' => $entry['status'],
+                        'paid_at' => $entry['paid_at'],
+                        'created_at' => $entry['created_at'],
+                        'updated_at' => $entry['paid_at'] ?? $entry['created_at'],
+                    ]);
+
+                    if (in_array($entry['status'], ['approved', 'paid'], true)) {
+                        $availableBalance += $commissionAmount;
+                    }
+                }
+
+                foreach ($scenario['withdrawals'] as $withdrawal) {
+                    WithdrawalRequest::create([
+                        'user_id' => $affiliate->id,
+                        'amount' => $withdrawal['amount'],
+                        'payment_method' => $withdrawal['payment_method'],
+                        'account_info' => $withdrawal['account_info'],
+                        'notes' => 'Demande de retrait seedee pour visualiser le parcours affiliation.',
+                        'status' => $withdrawal['status'],
+                        'processed_at' => $withdrawal['processed_at'],
+                        'processed_by' => $admin->id,
+                        'admin_notes' => $withdrawal['admin_notes'],
+                        'created_at' => $withdrawal['created_at'],
+                        'updated_at' => $withdrawal['processed_at'] ?? $withdrawal['created_at'],
+                    ]);
+
+                    if (in_array($withdrawal['status'], ['pending', 'approved', 'paid'], true)) {
+                        $availableBalance -= $withdrawal['amount'];
+                    }
+                }
+
+                $affiliate->update([
+                    'referral_balance' => max(0, round($availableBalance, 2)),
+                ]);
+            }
+        }
     }
 }

@@ -105,6 +105,10 @@ export default function SellerProfileEdit() {
                                 <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">Freelance</p>
                                 <p className="mt-2 text-sm font-semibold text-text-dark">{form.data.is_available_for_freelance ? 'Disponible pour des missions sur mesure' : 'Indisponible pour le freelance actuellement'}</p>
                             </div>
+                            <div className="rounded-2xl bg-white/80 p-4 shadow-sm sm:col-span-2">
+                                <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">Double verification</p>
+                                <p className="mt-2 text-sm font-semibold text-text-dark">{seller?.two_factor_enabled ? 'Activee pour proteger votre espace vendeur' : 'Desactivee, pensez a la configurer pour securiser vos revenus'}</p>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -206,6 +210,16 @@ export default function SellerProfileEdit() {
                             </p>
                             <Link href="/vendeur/plans" className="mt-4 inline-flex items-center rounded-full border border-primary/20 bg-white px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-white">
                                 Gerer mon plan vendeur
+                            </Link>
+                        </div>
+
+                        <div className="rounded-[24px] border border-sky-100 bg-sky-50/70 p-5">
+                            <p className="text-sm font-semibold text-text-dark">Verification en deux etapes</p>
+                            <p className="mt-2 text-sm leading-7 text-text-muted">
+                                Protegez votre espace vendeur avec un code email supplementaire apres le mot de passe. Cette verification est recommandee pour les comptes qui gerent des produits, commandes et revenus.
+                            </p>
+                            <Link href="/profile" className="mt-4 inline-flex items-center rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-sky-700">
+                                Gerer la securite 2FA
                             </Link>
                         </div>
 

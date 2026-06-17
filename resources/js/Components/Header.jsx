@@ -100,6 +100,7 @@ function AccountMenu({ user, handleLogout }) {
         ...(user.role === 'client' ? [{ href: '/mes-telechargements', label: 'Mes telechargements' }, { href: '/favoris', label: 'Mes favoris' }] : []),
         ...(user.is_seller ? [{ href: '/vendeur', label: 'Espace vendeur' }] : []),
         { href: '/profile', label: 'Profil' },
+        { href: '/affiliation', label: 'Mon affiliation' },
     ]
 
     return (
@@ -211,6 +212,7 @@ export default function Header() {
                             <nav className="hidden xl:flex items-center gap-7">
                                 <NavLink href="/">Accueil</NavLink>
                                 <NavLink href="/boutique">Boutique</NavLink>
+                                <NavLink href="/espace-etudiant">Espace Etudiant</NavLink>
                                 <Dropdown label="Categories" items={categoryLinks} />
                                 <NavLink href="/blog">Blog</NavLink>
                                 <NavLink href="/a-propos">A propos</NavLink>
@@ -301,7 +303,7 @@ export default function Header() {
                         <div className="mt-5">
                             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">Explorer</p>
                             <div className="grid gap-2">
-                                {[['/', 'Accueil'], ['/boutique', 'Boutique'], ['/blog', 'Blog'], ['/a-propos', 'A propos'], ['/contact', 'Contact'], ['/favoris', 'Favoris']].map(([href, label]) => (
+                                {[['/', 'Accueil'], ['/boutique', 'Boutique'], ['/espace-etudiant', 'Espace Etudiant'], ['/blog', 'Blog'], ['/a-propos', 'A propos'], ['/contact', 'Contact'], ['/favoris', 'Favoris']].map(([href, label]) => (
                                     <Link key={href} href={href} onClick={closeMobile} className="rounded-2xl px-4 py-3 text-sm font-semibold text-text-dark transition-colors hover:bg-primary-light hover:text-primary">
                                         {label}
                                     </Link>
@@ -345,6 +347,9 @@ export default function Header() {
                                         className="rounded-2xl bg-primary px-4 py-3 text-center text-sm font-semibold text-white shadow-[0_16px_35px_rgba(11,122,53,0.22)]"
                                     >
                                         Mon compte
+                                    </Link>
+                                    <Link href="/affiliation" onClick={closeMobile} className="rounded-2xl border border-border bg-white px-4 py-3 text-center text-sm font-semibold text-text-dark">
+                                        Mon affiliation
                                     </Link>
                                     <Link href="/profile" onClick={closeMobile} className="rounded-2xl border border-border bg-white px-4 py-3 text-center text-sm font-semibold text-text-dark">
                                         Profil
