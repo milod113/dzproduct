@@ -12,6 +12,7 @@ class Category extends Model
         'description',
         'icon',
         'image',
+        'thematic_image',
         'color',
         'sort_order',
     ];

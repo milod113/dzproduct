@@ -46,6 +46,21 @@ class PageController extends Controller
         ]);
     }
 
+    public function studentSpace()
+    {
+        $products = Product::with(['category', 'seller', 'images'])
+            ->where('is_active', true)
+            ->get()
+            ->map(fn ($p) => $this->formatProduct($p));
+
+        $studentSpace = $this->buildStudentSpaceData($products);
+
+        return Inertia::render('StudentSpace', [
+            'studentSpace' => $studentSpace,
+            'needs' => $this->buildStudentNeeds($products),
+        ]);
+    }
+
     public function freeProducts()
     {
         $products = Product::with(['category', 'seller', 'images'])
@@ -352,10 +367,11 @@ class PageController extends Controller
             'formation-montage-video' => 'montage-video',
         ];
 
-        $shortSlug = $slugMap[$p->slug] ?? $p->slug;
-        $ext = in_array($p->slug, ['guide-freelance-algerie', 'pack-reussite-bac', 'templates-canva-pro', 'marketing-digital-algerie']) ? 'png' : 'svg';
         $primaryImage = $p->images?->firstWhere('is_primary', true) ?? $p->images?->first();
-        $image = $primaryImage ? '/storage/' . ltrim($primaryImage->image_path, '/') : '/images/products/' . $shortSlug . '.' . $ext;
+        $defaultRemoteImage = $this->productSeedImageUrl($p->slug, 1200, 900);
+        $image = $primaryImage
+            ? $this->formatMediaPath($primaryImage->image_path)
+            : $defaultRemoteImage;
 
         $wishlistIds = $this->currentWishlistIds();
 
@@ -388,13 +404,13 @@ class PageController extends Controller
             'preview_points' => $p->preview_points ?? [],
             'faq_items' => $p->faq_items ?? [],
             'usage_instructions' => $p->usage_instructions ?? [],
-            'gallery' => $p->images
+            'gallery' => $p->images && $p->images->count() > 0
                 ? $p->images->sortBy('sort_order')->values()->map(fn ($imageItem) => [
                     'id' => $imageItem->id,
-                    'url' => '/storage/' . ltrim($imageItem->image_path, '/'),
+                    'url' => $this->formatMediaPath($imageItem->image_path),
                     'is_primary' => (bool) $imageItem->is_primary,
                 ])->all()
-                : [],
+                : $this->buildDefaultProductGallery($p->slug),
             'seller' => $this->formatSeller($p->seller),
             'student_badges' => $this->buildStudentBadges([
                 'category' => $p->category?->name ?? '',
@@ -449,6 +465,7 @@ class PageController extends Controller
             'name' => $seller->name,
             'phone' => $seller->phone,
             'wilaya' => $seller->wilaya,
+            'avatar' => $this->sellerAvatarUrl($seller),
             'seller_plan' => $seller->seller_plan,
             'seller_plan_label' => $seller->sellerPlanLabel(),
             'whatsapp_cta_text' => $seller->canUseCustomWhatsappCta() ? ($seller->whatsapp_cta_text ?: 'Achat Instantane') : null,
@@ -492,6 +509,30 @@ class PageController extends Controller
             'Mini-Cours' => 'Video',
         ];
 
+        $slugImageMap = [
+            'ebooks' => 'ebooks.svg',
+            'packs-educatifs' => 'courses.svg',
+            'templates-reseaux-sociaux' => 'templates.svg',
+            'cv-lettres-motivation' => 'cv.svg',
+            'documents-business' => 'business.svg',
+            'mini-cours' => 'courses.svg',
+            'photographie-design' => 'educational.svg',
+            'developpement-web' => 'templates.svg',
+            'finance-investissement' => 'business.svg',
+        ];
+
+        $image = null;
+
+        if (!empty($c->thematic_image)) {
+            $image = '/images/categories/' . $c->thematic_image;
+        } elseif (!empty($c->image)) {
+            $image = '/images/categories/' . $c->image;
+        } elseif (isset($slugImageMap[$c->slug])) {
+            $image = '/images/categories/' . $slugImageMap[$c->slug];
+        } else {
+            $image = $this->categorySeedImageUrl($c->slug);
+        }
+
         return [
             'id' => $c->id,
             'name' => $c->name,
@@ -500,7 +541,7 @@ class PageController extends Controller
             'icon' => $iconMap[$c->name] ?? 'BookOpen',
             'color' => $c->color ?? '#0B7A35',
             'price' => 590,
-            'image' => $c->image ? '/images/categories/' . $c->image : '/images/categories/' . $c->slug . '.svg',
+            'image' => $image,
         ];
     }
 
@@ -521,7 +562,9 @@ class PageController extends Controller
             'slug' => $b->slug,
             'excerpt' => $b->excerpt ?? '',
             'category' => $b->category ?? '',
-            'image' => $b->image ? '/images/blog/' . $b->image : '/images/blog/' . ($slugMap[$b->slug] ?? 'freelance') . '.svg',
+            'image' => $b->image
+                ? '/images/blog/' . $b->image
+                : $this->blogSeedImageUrl($b->slug),
             'date' => $b->published_at?->format('d/m/Y') ?? '',
             'author' => 'Boutique Digitale DZ',
         ];
@@ -655,6 +698,48 @@ class PageController extends Controller
         ];
     }
 
+    private function productSeedImageUrl(string $slug, int $width = 1200, int $height = 900): string
+    {
+        return "https://picsum.photos/seed/" . urlencode($slug) . "/{$width}/{$height}";
+    }
+
+    private function categorySeedImageUrl(string $slug, int $width = 1200, int $height = 900): string
+    {
+        return "https://picsum.photos/seed/category-" . urlencode($slug) . "/{$width}/{$height}";
+    }
+
+    private function blogSeedImageUrl(string $slug, int $width = 1400, int $height = 900): string
+    {
+        return "https://picsum.photos/seed/blog-" . urlencode($slug) . "/{$width}/{$height}";
+    }
+
+    private function buildDefaultProductGallery(string $slug): array
+    {
+        return collect(range(1, 3))->map(fn ($index) => [
+            'id' => "{$slug}-{$index}",
+            'url' => $this->productSeedImageUrl("{$slug}-{$index}", 1200, 900),
+            'is_primary' => $index === 1,
+        ])->all();
+    }
+
+    private function sellerAvatarUrl(User $seller): string
+    {
+        return 'https://i.pravatar.cc/400?u=' . urlencode($seller->email ?: (string) $seller->id);
+    }
+
+    private function formatMediaPath(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return '/storage/' . ltrim($path, '/');
+    }
+
     private function buildStudentSpaceData(Collection $products): array
     {
         $studentProducts = $products
@@ -694,6 +779,67 @@ class PageController extends Controller
                 ->values()
                 ->all(),
         ];
+    }
+
+    private function buildStudentNeeds(Collection $products): array
+    {
+        $needs = [
+            [
+                'slug' => 'bac-bem',
+                'label' => 'Bac & BEM',
+                'description' => 'Annales, resumes et packs de revision pour reussir les examens.',
+                'keywords' => ['bac', 'bem', 'concours'],
+                'categories' => ['packs éducatifs', 'packs educatifs'],
+                'tone' => 'emerald',
+            ],
+            [
+                'slug' => 'universite',
+                'label' => 'Universite',
+                'description' => 'Cours, supports et ressources pour licence, master et filieres techniques.',
+                'keywords' => ['licence', 'master', 'universite'],
+                'categories' => ['packs éducatifs', 'packs educatifs', 'mini-cours', 'ebooks'],
+                'tone' => 'sky',
+            ],
+            [
+                'slug' => 'cv-stage',
+                'label' => 'CV & Stage',
+                'description' => 'Modeles de CV, lettres et packs pour preparer stage, entretien et insertion pro.',
+                'keywords' => ['cv', 'lettre', 'entretien', 'stage'],
+                'categories' => ['cv & lettres de motivation'],
+                'tone' => 'amber',
+            ],
+            [
+                'slug' => 'programmation',
+                'label' => 'Programmation',
+                'description' => 'Packs debutants, cours techniques et ressources pour apprendre a coder.',
+                'keywords' => ['programmation', 'code', 'laravel', 'php', 'web'],
+                'categories' => ['développement web', 'developpement web', 'mini-cours', 'packs éducatifs', 'packs educatifs'],
+                'tone' => 'violet',
+            ],
+        ];
+
+        return collect($needs)->map(function ($need) use ($products) {
+            $matches = $products->filter(function ($product) use ($need) {
+                $category = mb_strtolower($product['category'] ?? '');
+                $name = mb_strtolower($product['name'] ?? '');
+
+                $matchCategory = in_array($category, $need['categories'], true);
+                $matchKeyword = collect($need['keywords'])->contains(fn ($keyword) => str_contains($name, $keyword));
+
+                return $matchCategory || $matchKeyword;
+            })->sortByDesc(function ($product) {
+                return (($product['rating'] ?? 0) * 1000) + ($product['sales'] ?? 0) + (($product['is_free'] ?? false) ? 40 : 0);
+            })->values();
+
+            return [
+                'slug' => $need['slug'],
+                'label' => $need['label'],
+                'description' => $need['description'],
+                'tone' => $need['tone'],
+                'count' => $matches->count(),
+                'products' => $matches->take(4)->values()->all(),
+            ];
+        })->all();
     }
 
     private function isStudentFriendlyProduct(array $product): bool
