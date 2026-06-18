@@ -11,6 +11,7 @@ use App\Http\Controllers\FreeProductController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RefundRequestController;
 use App\Http\Controllers\SellerMessageController;
 use App\Http\Controllers\SellerPlanRequestController;
 use App\Http\Controllers\SellerProfileController;
@@ -75,6 +76,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/affiliation', [AffiliateController::class, 'dashboard'])->name('affiliate.dashboard');
     Route::post('/affiliation/generer-code', [AffiliateController::class, 'generateCode'])->name('affiliate.generate');
     Route::post('/affiliation/retraits', [AffiliateController::class, 'requestWithdrawal'])->name('affiliate.withdrawals.store');
+    Route::post('/commandes/{orderId}/refunds', [RefundRequestController::class, 'store'])->name('refunds.store');
     Route::post('/gratuits/{productId}/telecharger', [FreeProductController::class, 'claim'])->name('free.products.claim');
 });
 
@@ -88,8 +90,13 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'twofactor'])->group(functi
     Route::put('/produits/{id}', [AdminController::class, 'productUpdate'])->name('admin.products.update');
     Route::delete('/produits/{id}', [AdminController::class, 'productDestroy'])->name('admin.products.destroy');
 
-    Route::get('/categories', fn () => Inertia::render('Admin/Categories'))->name('admin.categories');
+    Route::get('/categories', [AdminController::class, 'categories'])->name('admin.categories');
+    Route::post('/categories', [AdminController::class, 'categoryStore'])->name('admin.categories.store');
+    Route::put('/categories/{id}', [AdminController::class, 'categoryUpdate'])->name('admin.categories.update');
+    Route::delete('/categories/{id}', [AdminController::class, 'categoryDestroy'])->name('admin.categories.destroy');
     Route::get('/commandes', fn () => Inertia::render('Admin/Orders'))->name('admin.orders');
+    Route::get('/remboursements', [AdminController::class, 'refunds'])->name('admin.refunds');
+    Route::patch('/remboursements/{id}', [AdminController::class, 'refundUpdate'])->name('admin.refunds.update');
     Route::get('/clients', fn () => Inertia::render('Admin/Customers'))->name('admin.customers');
     Route::get('/vendeurs', [AdminController::class, 'sellers'])->name('admin.sellers');
     Route::patch('/vendeurs/{id}', [AdminController::class, 'sellerUpdate'])->name('admin.sellers.update');

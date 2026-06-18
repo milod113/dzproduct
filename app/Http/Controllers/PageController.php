@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Download;
 use App\Models\ProductImage;
+use App\Models\RefundRequest;
 use App\Models\SellerMessage;
 use App\Models\ServiceMission;
 use App\Models\User;
@@ -179,6 +180,20 @@ class PageController extends Controller
         }
 
         $orders = Order::where('user_id', $user->id)->with('items.product')->orderBy('created_at', 'desc')->get();
+        $refunds = RefundRequest::where('user_id', $user->id)
+            ->with('order')
+            ->latest()
+            ->get()
+            ->map(fn ($refund) => [
+                'id' => $refund->id,
+                'order_id' => $refund->order_id,
+                'order_number' => $refund->order?->order_number ?? 'N/A',
+                'amount' => (float) $refund->amount,
+                'reason' => $refund->reason,
+                'status' => $refund->status,
+                'created_at' => $refund->created_at->format('d/m/Y'),
+            ])
+            ->values();
         $downloads = Download::where('user_id', $user->id)->with('product')->orderBy('downloaded_at', 'desc')->get();
         $serviceMissions = ServiceMission::with('product')
             ->where('client_id', $user->id)
@@ -193,6 +208,7 @@ class PageController extends Controller
             ->values();
         return Inertia::render('UserDashboard', [
             'orders' => $orders,
+            'refunds' => $refunds,
             'downloads' => $downloads,
             'serviceMissions' => $serviceMissions,
         ]);

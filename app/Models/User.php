@@ -235,6 +235,11 @@ class User extends Authenticatable
         return $this->hasMany(WithdrawalRequest::class);
     }
 
+    public function refundRequests()
+    {
+        return $this->hasMany(RefundRequest::class);
+    }
+
     public function sellerPlanRequests()
     {
         return $this->hasMany(SellerPlanRequest::class, 'seller_id');

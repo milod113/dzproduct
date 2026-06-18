@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react'
+import { Link, useForm, usePage } from '@inertiajs/react'
 import ClientLayout from '@/Layouts/ClientLayout'
 
 function Surface({ children, className = '' }) {
@@ -81,7 +81,7 @@ function StatusPill({ children, tone = 'default' }) {
 }
 
 export default function UserDashboard() {
-    const { orders = [], downloads = [], serviceMissions = [], auth, wishlist } = usePage().props
+    const { orders = [], refunds = [], downloads = [], serviceMissions = [], auth, wishlist } = usePage().props
     const user = auth?.user || { name: 'Utilisateur', email: '' }
     const favoriteCount = wishlist?.count ?? 0
     const totalSpent = orders.reduce((sum, order) => sum + Number.parseInt(order.total, 10), 0) || 0
@@ -134,6 +134,33 @@ export default function UserDashboard() {
             ),
         },
     ]
+
+    const refundForm = useForm({
+        reason: 'technical_issue',
+        details: '',
+    })
+
+    const submitRefund = (orderId) => {
+        refundForm.post(route('refunds.store', orderId), {
+            preserveScroll: true,
+            onSuccess: () => refundForm.reset('details'),
+        })
+    }
+
+    const refundStatusTone = (status) => {
+        if (status === 'refunded') return 'success'
+        if (status === 'approved') return 'info'
+        if (status === 'rejected') return 'default'
+        return 'pending'
+    }
+
+    const refundReasonLabel = (reason) => ({
+        technical_issue: 'Probleme technique',
+        wrong_product: 'Mauvais produit',
+        duplicate_order: 'Commande dupliquee',
+        service_not_delivered: 'Service non livre',
+        other: 'Autre',
+    }[reason] || reason)
 
     return (
         <ClientLayout title="Tableau de bord client">
@@ -286,10 +313,49 @@ export default function UserDashboard() {
                                         const itemNames = items.map((item) => item.product?.name || item.name).join(', ')
                                         const normalizedStatus = String(order.status || '').toLowerCase()
                                         const tone = normalizedStatus.includes('completed') || normalizedStatus.includes('livr') ? 'success' : 'pending'
+                                        const canRequestRefund = ['completed', 'paid'].includes(normalizedStatus)
+                                        const hasRefund = refunds.some((refund) => refund.order_id === order.id)
 
                                         return (
-                                            <tr key={order.id} className="border-b border-border/70 last:border-0">
-                                                <td className="py-4 font-semibold text-text-dark">{itemNames || `Commande #${order.id}`}</td>
+                                            <tr key={order.id} className="border-b border-border/70 last:border-0 align-top">
+                                                <td className="py-4 font-semibold text-text-dark">
+                                                    <div>{itemNames || `Commande #${order.id}`}</div>
+                                                    {canRequestRefund && !hasRefund && (
+                                                        <div className="mt-3 rounded-2xl border border-amber-100 bg-amber-50 p-3">
+                                                            <div className="grid gap-3 md:grid-cols-[1fr_1.3fr_auto]">
+                                                                <select
+                                                                    value={refundForm.data.reason}
+                                                                    onChange={(e) => refundForm.setData('reason', e.target.value)}
+                                                                    className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs text-text-dark outline-none"
+                                                                >
+                                                                    <option value="technical_issue">Probleme technique</option>
+                                                                    <option value="wrong_product">Mauvais produit</option>
+                                                                    <option value="duplicate_order">Commande dupliquee</option>
+                                                                    <option value="service_not_delivered">Service non livre</option>
+                                                                    <option value="other">Autre</option>
+                                                                </select>
+                                                                <input
+                                                                    type="text"
+                                                                    value={refundForm.data.details}
+                                                                    onChange={(e) => refundForm.setData('details', e.target.value)}
+                                                                    placeholder="Expliquez brievement le probleme"
+                                                                    className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs text-text-dark outline-none"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => submitRefund(order.id)}
+                                                                    disabled={refundForm.processing}
+                                                                    className="rounded-xl bg-amber-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-60"
+                                                                >
+                                                                    {refundForm.processing ? 'Envoi...' : 'Demander'}
+                                                                </button>
+                                                            </div>
+                                                            {refundForm.errors.refund && <p className="mt-2 text-xs text-rose-600">{refundForm.errors.refund}</p>}
+                                                            {refundForm.errors.reason && <p className="mt-2 text-xs text-rose-600">{refundForm.errors.reason}</p>}
+                                                            {refundForm.errors.details && <p className="mt-2 text-xs text-rose-600">{refundForm.errors.details}</p>}
+                                                        </div>
+                                                    )}
+                                                </td>
                                                 <td className="py-4 text-text-muted">{new Date(order.created_at).toLocaleDateString('fr-DZ')}</td>
                                                 <td className="hidden py-4 text-right text-text-dark md:table-cell">{Number.parseInt(order.total, 10).toLocaleString('fr-DZ')} DZD</td>
                                                 <td className="py-4 text-right">
@@ -342,6 +408,34 @@ export default function UserDashboard() {
                     </div>
                 </Surface>
             </div>
+
+            <Surface className="mt-6 p-6 md:p-8">
+                <SectionHeader
+                    eyebrow="Remboursements"
+                    title="Suivi de vos demandes"
+                    text="Retrouvez l etat de vos remboursements demandes et les commandes concernees."
+                />
+
+                <div className="grid gap-4">
+                    {refunds.length ? refunds.map((refund) => (
+                        <div key={refund.id} className="rounded-[22px] border border-border/70 bg-[#fbfcfb] p-5">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-text-dark">{refund.order_number}</p>
+                                    <p className="mt-1 text-xs text-text-muted">
+                                        {refundReasonLabel(refund.reason)} • {Number(refund.amount).toLocaleString('fr-DZ')} DZD • {refund.created_at}
+                                    </p>
+                                </div>
+                                <StatusPill tone={refundStatusTone(refund.status)}>{refund.status}</StatusPill>
+                            </div>
+                        </div>
+                    )) : (
+                        <div className="rounded-[24px] border border-dashed border-border bg-[#fbfcfb] p-10 text-center text-sm text-text-muted">
+                            Aucune demande de remboursement pour le moment.
+                        </div>
+                    )}
+                </div>
+            </Surface>
 
             <Surface className="mt-6 p-6 md:p-8">
                 <SectionHeader

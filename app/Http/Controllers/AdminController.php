@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\RefundRequest;
 use App\Models\WithdrawalRequest;
 use App\Models\SellerPlanRequest;
 use App\Models\User;
@@ -13,6 +14,76 @@ use Inertia\Inertia;
 
 class AdminController extends Controller
 {
+    public function refunds()
+    {
+        $refunds = RefundRequest::with(['order.items.product', 'user', 'processor'])
+            ->latest()
+            ->get()
+            ->map(fn ($refund) => [
+                'id' => $refund->id,
+                'order_id' => $refund->order_id,
+                'order_number' => $refund->order?->order_number ?? 'N/A',
+                'customer' => [
+                    'name' => $refund->user?->name ?? 'Client',
+                    'email' => $refund->user?->email,
+                ],
+                'products' => $refund->order?->items?->map(fn ($item) => $item->product?->name)->filter()->values()->all() ?? [],
+                'amount' => (float) $refund->amount,
+                'reason' => $refund->reason,
+                'details' => $refund->details,
+                'status' => $refund->status,
+                'admin_notes' => $refund->admin_notes,
+                'created_at' => $refund->created_at->format('d/m/Y'),
+                'processed_at' => $refund->processed_at?->format('d/m/Y'),
+                'processed_by_name' => $refund->processor?->name,
+            ]);
+
+        return Inertia::render('Admin/Refunds', [
+            'refunds' => $refunds,
+            'stats' => [
+                'total' => $refunds->count(),
+                'pending' => $refunds->where('status', RefundRequest::STATUS_PENDING)->count(),
+                'approved' => $refunds->where('status', RefundRequest::STATUS_APPROVED)->count(),
+                'rejected' => $refunds->where('status', RefundRequest::STATUS_REJECTED)->count(),
+                'refunded' => $refunds->where('status', RefundRequest::STATUS_REFUNDED)->count(),
+                'requestedAmount' => (float) $refunds->sum('amount'),
+                'refundedAmount' => (float) $refunds->where('status', RefundRequest::STATUS_REFUNDED)->sum('amount'),
+            ],
+        ]);
+    }
+
+    public function refundUpdate(Request $request, int $id)
+    {
+        $refund = RefundRequest::with('order')->findOrFail($id);
+
+        $validated = $request->validate([
+            'status' => 'required|in:approved,rejected,refunded',
+            'admin_notes' => 'nullable|string|max:1500',
+        ]);
+
+        $refund->update([
+            'status' => $validated['status'],
+            'admin_notes' => $validated['admin_notes'] ?? null,
+            'processed_by' => auth()->id(),
+            'processed_at' => now(),
+        ]);
+
+        if ($refund->order) {
+            $orderStatus = match ($validated['status']) {
+                RefundRequest::STATUS_APPROVED => 'refund_approved',
+                RefundRequest::STATUS_REJECTED => 'completed',
+                RefundRequest::STATUS_REFUNDED => 'refunded',
+                default => $refund->order->status,
+            };
+
+            $refund->order->update([
+                'status' => $orderStatus,
+            ]);
+        }
+
+        return back()->with('toast', 'Le statut de remboursement a ete mis a jour.');
+    }
+
     public function affiliateWithdrawals()
     {
         $withdrawals = WithdrawalRequest::with(['user', 'processor'])
@@ -407,6 +478,82 @@ class AdminController extends Controller
             'is_top_rated_seller' => $validated['is_top_rated_seller'] ?? false,
             'is_official_partner' => $validated['is_official_partner'] ?? false,
         ]);
+    }
+
+    public function categories()
+    {
+        $categories = Category::withCount('products')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'slug' => $c->slug,
+                'description' => $c->description,
+                'icon' => $c->icon,
+                'image' => $c->image,
+                'thematic_image' => $c->thematic_image,
+                'color' => $c->color,
+                'sort_order' => $c->sort_order,
+                'products_count' => $c->products_count,
+                'created_at' => $c->created_at?->format('d/m/Y'),
+            ]);
+
+        return Inertia::render('Admin/Categories', [
+            'categories' => $categories,
+        ]);
+    }
+
+    public function categoryStore(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'required|string|max:255|unique:categories,slug',
+            'description' => 'nullable|string|max:1000',
+            'icon' => 'nullable|string|max:50',
+            'image' => 'nullable|string|max:255',
+            'thematic_image' => 'nullable|string|max:255',
+            'color' => 'nullable|string|max:20',
+            'sort_order' => 'nullable|integer|min:0',
+        ]);
+
+        Category::create($validated);
+
+        return back()->with('toast', 'Categorie creee avec succes.');
+    }
+
+    public function categoryUpdate(Request $request, $id)
+    {
+        $category = Category::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'required|string|max:255|unique:categories,slug,' . $id,
+            'description' => 'nullable|string|max:1000',
+            'icon' => 'nullable|string|max:50',
+            'image' => 'nullable|string|max:255',
+            'thematic_image' => 'nullable|string|max:255',
+            'color' => 'nullable|string|max:20',
+            'sort_order' => 'nullable|integer|min:0',
+        ]);
+
+        $category->update($validated);
+
+        return back()->with('toast', 'Categorie mise a jour avec succes.');
+    }
+
+    public function categoryDestroy($id)
+    {
+        $category = Category::withCount('products')->findOrFail($id);
+
+        if ($category->products_count > 0) {
+            return back()->with('toast', 'Impossible de supprimer une categorie qui contient des produits.');
+        }
+
+        $category->delete();
+
+        return back()->with('toast', 'Categorie supprimee avec succes.');
     }
 
     private function formatSellerBadges(?User $seller): array
